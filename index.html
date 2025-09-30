@@ -268,13 +268,20 @@
                 <p id="user-email-display"></p>
                 <button id="logout-btn">QUIT</button>
             </header>
+
+            <!-- === DATE FILTER MOVED HERE === -->
+            <div class="filter-section section" style="display:flex; gap: 15px;">
+                <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
+                <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
+            </div>
             
             <!-- MARIO DASHBOARD -->
             <div class="dashboard">
                 <div class="card"><h3>คงเหลือ (สะสม)</h3><p class="amount" id="balance">฿0.00</p></div>
                 <div class="card"><h3>รายรับ (เดือนนี้)</h3><p class="amount" id="total-income">฿0.00</p></div>
                 <div class="card"><h3>รายจ่าย (เดือนนี้)</h3><p class="amount" id="total-expense">฿0.00</p></div>
-                <div class="card"><h3>บัตรเครดิต (เดือนนี้)</h3><p class="amount" id="total-credit">฿0.00</p></div>
+                <!-- === MODIFIED CARD === -->
+                <div class="card"><h3>ผลต่าง (เดือนนี้)</h3><p class="amount" id="monthly-difference">฿0.00</p></div>
             </div>
 
             <div class="view-toggle">
@@ -283,10 +290,7 @@
             </div>
 
             <div id="transaction-view">
-                <div class="filter-section section" style="display:flex; gap: 15px;">
-                    <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
-                    <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
-                </div>
+                <!-- Date filter was removed from here -->
                 <div class="section">
                     <h2 class="section-title">ประวัติรายการ</h2>
                     <div id="list"></div>
@@ -440,16 +444,29 @@
             }
         };
         
+        // === JAVASCRIPT LOGIC UPDATED HERE ===
         const updateDashboard = (monthlyTransactions, upToCurrentMonthTransactions) => {
             const income = monthlyTransactions.filter(t => t.type === 'รายรับ').reduce((acc, t) => acc + t.amount, 0);
             const expense = monthlyTransactions.filter(t => t.type === 'รายจ่าย').reduce((acc, t) => acc + t.amount, 0);
             const credit = monthlyTransactions.filter(t => t.type === 'รายจ่าย (บัตรเครดิต)').reduce((acc, t) => acc + t.amount, 0);
             const totalExpense = expense + credit;
+            const difference = income - totalExpense; // Calculate the difference
+            
             const cumulativeBalance = upToCurrentMonthTransactions.reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
+
             document.getElementById('balance').innerHTML = `฿${formatMoney(cumulativeBalance)}`;
             document.getElementById('total-income').innerHTML = `฿${formatMoney(income)}`;
             document.getElementById('total-expense').innerHTML = `฿${formatMoney(totalExpense)}`;
-            document.getElementById('total-credit').innerHTML = `฿${formatMoney(credit)}`;
+
+            // Update the new difference element
+            const differenceEl = document.getElementById('monthly-difference');
+            differenceEl.innerHTML = `฿${formatMoney(difference)}`;
+            differenceEl.classList.remove('positive', 'negative');
+            if (difference >= 0) {
+                differenceEl.classList.add('positive');
+            } else {
+                differenceEl.classList.add('negative');
+            }
         };
         
         const renderTransactionList = (transactions) => {
