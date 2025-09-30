@@ -241,8 +241,9 @@
         @media (min-width: 600px) {
             .dashboard { grid-template-columns: repeat(4, 1fr); }
         }
+        /* === MODIFIED FOR MOBILE VIEW === */
         @media (max-width: 480px) {
-            .dashboard { grid-template-columns: 1fr; }
+            .dashboard { grid-template-columns: repeat(2, 1fr); } /* ปรับเป็น 2 คอลัมน์สำหรับมือถือ */
         }
     </style>
 </head>
