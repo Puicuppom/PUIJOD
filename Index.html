@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมบัญชี</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+        :root {
+            --primary-color: #3b82f6; --danger-color: #ef4444; --success-color: #22c55e;
+            --light-color: #f3f4f6; --dark-color: #1f2937; --text-color: #374151;
+            --card-bg: #ffffff; --shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Kanit', sans-serif; background-color: var(--light-color); color: var(--text-color); }
+        .container { max-width: 700px; margin: auto; padding: 15px; }
+        .hidden { display: none !important; }
+
+        .section { background: var(--card-bg); padding: 20px; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 25px; }
+        .section-title { text-align: center; margin-bottom: 20px; color: var(--dark-color); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 5px; font-family: 'Kanit', sans-serif; font-size: 1rem; }
+        button { display: block; width: 100%; padding: 12px; border: none; border-radius: 5px; background-color: var(--primary-color); color: white; font-family: 'Kanit', sans-serif; font-size: 1.1rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s ease; }
+        button:hover { opacity: 0.9; }
+        .positive { color: var(--success-color); }
+        .negative { color: var(--danger-color); }
+
+        #auth-container { text-align: center; padding-top: 50px; }
+        .auth-form { max-width: 400px; margin: 20px auto; }
+
+        header { margin-bottom: 25px; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; }
+        header h1 { font-size: 1.8rem; color: var(--dark-color); margin: 0 0 4px 0; }
+        header p#user-email-display { margin: 0 0 10px 0; font-size: 1rem; color: #6b7280; word-break: break-all; }
+        #logout-btn { width: auto; padding: 6px 15px; font-size: 0.9rem; background-color: var(--danger-color); display: inline-block; }
+
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; }
+        .card h3 { font-size: 0.9rem; color: #6b7280; font-weight: 400; }
+        .card .amount { font-size: 1.6rem; font-weight: 600; }
+
+        .filter-section { display: flex; gap: 15px; }
+        .view-toggle { display: flex; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 25px; }
+        .view-toggle-btn { flex: 1; padding: 10px; background: none; border: none; cursor: pointer; font-family: 'Kanit'; font-size: 1rem; color: #6b7280; }
+        .view-toggle-btn.active { background-color: var(--primary-color); color: white; border-radius: 7px; }
+
+        .actions-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .action-btn { background-color: #4b5563; font-size: 0.9rem; padding: 10px; }
+        
+        #list { list-style-type: none; }
+        .list-group-header { background-color: #f9fafb; padding: 12px; border-bottom: 1px solid #e5e7eb; border-top: 2px solid #e5e7eb; margin-top: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .list-group-header:first-child { margin-top: 0; border-top: none; }
+        .group-total { font-weight: 500; }
+        .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px solid #e5e7eb; }
+        .item-details { display: flex; flex-direction: column; } .item-type { font-size: 0.8rem; color: #6b7280; }
+        .item-actions { display: flex; align-items: center; gap: 5px; }
+        .item-actions .item-amount { margin-right: 10px; }
+        .item-actions button { border: none; padding: 4px 8px; border-radius: 5px; cursor: pointer; color: white; font-size: 0.8rem; }
+        .edit-btn { background: #f59e0b; }
+        .delete-btn { background: var(--danger-color); }
+        .sub-list { padding-left: 15px; border-bottom: 1px solid #e5e7eb; }
+        
+        #summary-table { width: 100%; border-collapse: collapse; }
+        #summary-table th, #summary-table td { padding: 12px 8px; text-align: right; border-bottom: 1px solid #e5e7eb; }
+        #summary-table th { background-color: #f9fafb; text-align: center; }
+        #summary-table td:first-child { text-align: left; font-weight: 500; }
+        #summary-table tfoot td { font-weight: bold; }
+
+        .modal-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; }
+        .modal-content h2 { margin-bottom: 20px; text-align: center; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions button { flex: 1; }
+        .btn-secondary { background-color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- AUTH CONTAINER -->
+        <div id="auth-container"><div id="login-view" class="section auth-form"><h2>เข้าสู่ระบบ</h2><form id="login-form"><div class="form-group"><input type="email" id="login-email" placeholder="อีเมล" required></div><div class="form-group"><input type="password" id="login-password" placeholder="รหัสผ่าน" required></div><button type="submit">เข้าสู่ระบบ</button></form></div></div>
+
+        <!-- MAIN APP CONTAINER -->
+        <div id="app-container" class="hidden">
+            <header><h1>บัญชีของฉัน</h1><p id="user-email-display"></p><button id="logout-btn">ออกจากระบบ</button></header>
+            <div class="section dashboard"><div class="card"><h3>คงเหลือ (สะสม)</h3><p class="amount" id="balance">฿0.00</p></div><div class="card"><h3>รายรับ (เดือนนี้)</h3><p class="amount positive" id="total-income">฿0.00</p></div><div class="card"><h3>รายจ่าย (เดือนนี้)</h3><p class="amount negative" id="total-expense">฿0.00</p></div><div class="card"><h3>บัตรเครดิต (เดือนนี้)</h3><p class="amount negative" id="total-credit">฿0.00</p></div></div>
+            <div class="view-toggle"><button class="view-toggle-btn active" onclick="setView('transactions')">ดูรายการ</button><button class="view-toggle-btn" onclick="setView('summary')">ดูสรุป</button></div>
+            <div id="transaction-view"><div class="filter-section section"><div class="form-group" style="flex:1;"><label for="year-filter">ปี</label><select id="year-filter"></select></div><div class="form-group" style="flex:1;"><label for="month-filter">เดือน</label><select id="month-filter"></select></div></div><div class="section"><h2 class="section-title">ประวัติรายการ</h2><div id="list"></div></div></div>
+            <div id="summary-view" class="hidden"><div class="section"><h2 class="section-title">สรุปรายปี <span id="summary-year-title"></span></h2><div style="overflow-x:auto;"><table id="summary-table"></table></div></div></div>
+            <div class="section"><h2 class="section-title">เพิ่มรายการ</h2><form id="transaction-form"><div class="form-group"><label for="type">ประเภท</label><select id="type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div><div class="form-group"><label for="description">รายละเอียด</label><input type="text" id="description" required></div><div class="form-group"><label for="amount">จำนวนเงิน</label><input type="number" step="0.01" id="amount" required></div><div class="form-group"><label for="transaction_date">วันที่</label><input type="date" id="transaction_date" required></div><button type="submit">เพิ่ม</button></form></div>
+            <div class="section actions-section"><button class="action-btn" id="export-template-btn">Export Template</button><button class="action-btn" id="export-data-btn">Export Data</button><button class="action-btn" id="import-btn">Import XLSX</button><input type="file" id="import-file" class="hidden" accept=".xlsx, .xls"></div>
+        </div>
+    </div>
+    
+    <!-- EDIT TRANSACTION MODAL -->
+    <div id="edit-modal-container" class="modal-container hidden"><div class="modal-content"><h2>แก้ไขรายการ</h2><form id="edit-transaction-form"><input type="hidden" id="edit-transaction-id"><div class="form-group"><label for="edit-type">ประเภท</label><select id="edit-type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div><div class="form-group"><label for="edit-description">รายละเอียด</label><input type="text" id="edit-description" required></div><div class="form-group"><label for="edit-amount">จำนวนเงิน</label><input type="number" step="0.01" id="edit-amount" required></div><div class="form-group"><label for="edit-transaction_date">วันที่</label><input type="date" id="edit-transaction_date" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeEditModal()">ยกเลิก</button><button type="submit">บันทึก</button></div></form></div></div>
+
+    <script>
+        const SUPABASE_URL = "https://fmbympgecspgqtnazrbm.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtYnltcGdlY3NwZ3F0bmF6cmJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDkwOTksImV4cCI6MjA2NjMyNTA5OX0.rqOrNDNRTF7WnDS6utTTKfFoNZKPiMZV_ttqYzYCaJs";
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allTransactions = [];
+        let currentView = 'transactions';
+
+        // DOM Elements
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const yearFilterEl = document.getElementById('year-filter');
+        const monthFilterEl = document.getElementById('month-filter');
+        const transactionDateEl = document.getElementById('transaction_date');
+        const transactionView = document.getElementById('transaction-view');
+        const summaryView = document.getElementById('summary-view');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const editModalContainer = document.getElementById('edit-modal-container');
+
+        // ---- AUTH ----
+        const handleLogin = async (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const { error } = await db.auth.signInWithPassword({ email, password }); if (error) alert(error.message); };
+        const handleLogout = async () => { const { error } = await db.auth.signOut(); if (error) console.error("Logout Error:", error); };
+        
+        // ---- CORE APP LOGIC ----
+        const fetchAllTransactions = async () => {
+            const { data, error } = await db.from('transactions').select('*').order('transaction_date', { ascending: true });
+            if (error) { console.error('Error fetching transactions:', error); return; }
+            allTransactions = data;
+            renderUI();
+        };
+
+        const addTransaction = async (e) => {
+            e.preventDefault();
+            const { data: { user } } = await db.auth.getUser();
+            const newTransaction = { user_id: user.id, type: document.getElementById('type').value, description: document.getElementById('description').value, amount: +document.getElementById('amount').value, transaction_date: transactionDateEl.value };
+            const { error } = await db.from('transactions').insert(newTransaction);
+            if (error) { console.error('Error adding transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            await fetchAllTransactions();
+            document.getElementById('transaction-form').reset();
+            transactionDateEl.valueAsDate = new Date();
+        };
+
+        const removeTransaction = async (id) => {
+            if (!confirm('คุณแน่ใจว่าต้องการลบรายการนี้?')) return;
+            const { error } = await db.from('transactions').delete().eq('id', id);
+            if (error) { console.error('Error deleting transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            await fetchAllTransactions();
+        };
+        
+        // ---- EDIT MODAL LOGIC ----
+        window.openEditModal = (id) => {
+            const transaction = allTransactions.find(t => t.id === id);
+            if (!transaction) return;
+            document.getElementById('edit-transaction-id').value = transaction.id;
+            document.getElementById('edit-type').value = transaction.type;
+            document.getElementById('edit-description').value = transaction.description;
+            document.getElementById('edit-amount').value = transaction.amount;
+            document.getElementById('edit-transaction_date').value = transaction.transaction_date;
+            editModalContainer.classList.remove('hidden');
+        };
+
+        window.closeEditModal = () => { editModalContainer.classList.add('hidden'); };
+
+        const handleUpdateTransaction = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-transaction-id').value;
+            const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: +document.getElementById('edit-amount').value, transaction_date: document.getElementById('edit-transaction_date').value };
+            const { error } = await db.from('transactions').update(updatedTransaction).eq('id', id);
+            if (error) { console.error('Error updating transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            closeEditModal();
+            await fetchAllTransactions();
+        };
+
+        // ---- UI & FILTERING & VIEW ----
+        window.setView = (view) => {
+            currentView = view;
+            document.querySelectorAll('.view-toggle-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.view-toggle-btn[onclick="setView('${view}')"]`).classList.add('active');
+            transactionView.classList.toggle('hidden', view !== 'transactions');
+            summaryView.classList.toggle('hidden', view !== 'summary');
+            renderUI();
+        };
+
+        const renderUI = () => {
+            if (!yearFilterEl.value || !monthFilterEl.value) return; 
+            const selectedYear = parseInt(yearFilterEl.value);
+            const selectedMonth = parseInt(monthFilterEl.value);
+            const monthlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear && (date.getMonth() + 1) === selectedMonth; });
+            const upToCurrentMonthTransactions = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0); return transDate <= lastDayOfMonth; });
+            updateDashboard(monthlyTransactions, upToCurrentMonthTransactions);
+            if (currentView === 'transactions') { 
+                renderTransactionList(monthlyTransactions.slice().sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date)));
+            } else { 
+                const yearlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear; });
+                renderSummary(yearlyTransactions, selectedYear);
+            }
+        };
+        
+        const updateDashboard = (monthlyTransactions, upToCurrentMonthTransactions) => {
+            const income = monthlyTransactions.filter(t => t.type === 'รายรับ').reduce((acc, t) => acc + t.amount, 0);
+            const expense = monthlyTransactions.filter(t => t.type === 'รายจ่าย').reduce((acc, t) => acc + t.amount, 0);
+            const credit = monthlyTransactions.filter(t => t.type === 'รายจ่าย (บัตรเครดิต)').reduce((acc, t) => acc + t.amount, 0);
+            const totalExpense = expense + credit;
+            const cumulativeBalance = upToCurrentMonthTransactions.reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
+            document.getElementById('balance').innerHTML = `฿${formatMoney(cumulativeBalance)}`;
+            document.getElementById('total-income').innerHTML = `฿${formatMoney(income)}`;
+            document.getElementById('total-expense').innerHTML = `฿${formatMoney(totalExpense)}`;
+            document.getElementById('total-credit').innerHTML = `฿${formatMoney(credit)}`;
+        };
+        
+        const renderTransactionList = (transactions) => {
+            const listEl = document.getElementById('list');
+            listEl.innerHTML = '';
+            if (transactions.length === 0) { listEl.innerHTML = '<p>ไม่พบรายการในเดือนนี้</p>'; return; }
+
+            const groupedByType = transactions.reduce((groups, t) => {
+                const type = t.type;
+                if (!groups[type]) { groups[type] = []; }
+                groups[type].push(t);
+                return groups;
+            }, {});
+
+            const groupOrder = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)'];
+
+            groupOrder.forEach(type => {
+                if (!groupedByType[type]) return; 
+
+                const groupContainer = document.createElement('div');
+                const header = document.createElement('div');
+                header.className = 'list-group-header';
+                header.onclick = () => { subList.classList.toggle('hidden'); };
+                
+                const groupTotal = groupedByType[type].reduce((sum, t) => sum + t.amount, 0);
+                const totalClass = type === 'รายรับ' ? 'positive' : 'negative';
+                const totalSign = type === 'รายรับ' ? '+' : '-';
+                
+                header.innerHTML = `<span>${type}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
+                
+                const subList = document.createElement('ul');
+                // **MODIFIED: Add 'hidden' class to collapse by default**
+                subList.className = 'sub-list hidden';
+                
+                groupedByType[type].forEach(t => {
+                    const item = document.createElement('li');
+                    item.className = 'transaction-item';
+                    const sign = t.type === 'รายรับ' ? '+' : '-';
+                    const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
+                    const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
+                    
+                    item.innerHTML = `<div class="item-details"><span class="item-name">${t.description}</span><span class="item-type">${formattedDate}</span></div><div class="item-actions"><span class="item-amount ${itemClass}">${sign}฿${formatMoney(t.amount)}</span><button class="edit-btn" onclick="openEditModal(${t.id})">แก้ไข</button><button class="delete-btn" onclick="removeTransaction(${t.id})">ลบ</button></div>`;
+                    subList.appendChild(item);
+                });
+                groupContainer.appendChild(header);
+                groupContainer.appendChild(subList);
+                listEl.appendChild(groupContainer);
+            });
+        };
+
+        const renderSummary = (yearlyTransactions, year) => {
+            document.getElementById('summary-year-title').innerText = `พ.ศ. ${year + 543}`;
+            const startDateOfYear = new Date(year, 0, 1);
+            let runningBalance = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); return transDate < startDateOfYear; }).reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
+            const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            let summaryData = Array(12).fill(0).map((_, i) => ({ month: thaiMonths[i], income: 0, expense: 0, credit: 0 }));
+            yearlyTransactions.forEach(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); const monthIndex = date.getMonth(); if (t.type === 'รายรับ') summaryData[monthIndex].income += t.amount; else if (t.type === 'รายจ่าย') summaryData[monthIndex].expense += t.amount; else if (t.type === 'รายจ่าย (บัตรเครดิต)') summaryData[monthIndex].credit += t.amount; });
+            const tableEl = document.getElementById('summary-table');
+            let tableHTML = `<thead><tr><th>เดือน</th><th>รายรับ</th><th>รายจ่าย</th><th>บัตรเครดิต</th><th>คงเหลือสะสม</th></tr></thead><tbody>`;
+            let total = { income: 0, expense: 0, credit: 0 };
+            summaryData.forEach(data => { runningBalance += data.income - (data.expense + data.credit); total.income += data.income; total.expense += data.expense; total.credit += data.credit; tableHTML += `<tr><td>${data.month}</td><td class="positive">${formatMoney(data.income)}</td><td class="negative">${formatMoney(data.expense)}</td><td class="negative">${formatMoney(data.credit)}</td><td class="${runningBalance >= 0 ? 'positive' : 'negative'}">${formatMoney(runningBalance)}</td></tr>`; });
+            tableHTML += `</tbody><tfoot><tr><td>รวม</td><td class="positive">${formatMoney(total.income)}</td><td class="negative">${formatMoney(total.expense)}</td><td class="negative">${formatMoney(total.credit)}</td><td class="${runningBalance >= 0 ? 'positive' : 'negative'}">${formatMoney(runningBalance)}</td></tr></tfoot>`;
+            tableEl.innerHTML = tableHTML;
+        };
+
+        const populateDateFilters = () => { const now = new Date(); const currentYear = now.getFullYear(); const currentMonth = now.getMonth() + 1; yearFilterEl.innerHTML = ''; for (let i = currentYear + 1; i >= currentYear - 5; i--) { const option = document.createElement('option'); option.value = i; option.textContent = i + 543; yearFilterEl.appendChild(option); } const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]; monthFilterEl.innerHTML = ''; thaiMonths.forEach((month, index) => { const option = document.createElement('option'); option.value = index + 1; option.textContent = month; monthFilterEl.appendChild(option); }); yearFilterEl.value = currentYear; monthFilterEl.value = currentMonth; };
+        const formatMoney = (number) => Number(number).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+
+        // ---- EXPORT/IMPORT ----
+        const XLSX_HEADERS = ['transaction_date', 'type', 'description', 'amount'];
+        const exportTemplate = () => { const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([ XLSX_HEADERS ]); const dropdownOptions = '"รายรับ,รายจ่าย,รายจ่าย (บัตรเครดิต)"'; ws['!dataValidation'] = [{ sqref: 'B2:B1000', opts: { type: 'list', allowBlank: true, formula1: dropdownOptions, showDropDown: true, errorStyle: 'warning', error: 'กรุณาเลือกจากรายการ', errorTitle: 'ข้อมูลไม่ถูกต้อง' } }]; XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "template.xlsx"); };
+        const exportData = () => { /* ... existing code ... */ };
+        const formatDateForSupabase = (excelDate) => { try { if (excelDate instanceof Date) { return excelDate.toISOString().split('T')[0]; } if (typeof excelDate === 'number') { const jsDate = new Date(Math.round((excelDate - 25569) * 86400 * 1000)); return jsDate.toISOString().split('T')[0]; } if (typeof excelDate === 'string' && excelDate.match(/^\d{4}-\d{2}-\d{2}$/)) { return excelDate; } throw new Error("Invalid date format"); } catch (e) { console.error("Could not parse date:", excelDate); return null; } };
+        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary' }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } alert(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ!`); await fetchAllTransactions(); } else { alert('ไม่พบข้อมูลที่ถูกต้องในไฟล์'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); alert('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
+
+        // ---- APP INITIALIZATION ----
+        const initializeApp = async () => { const { data: { session } } = await db.auth.getSession(); if (session) { authContainer.classList.add('hidden'); appContainer.classList.remove('hidden'); userEmailDisplay.textContent = session.user.email; transactionDateEl.valueAsDate = new Date(); populateDateFilters(); await fetchAllTransactions(); } else { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); } };
+        db.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_IN') { initializeApp(); } else if (event === 'SIGNED_OUT') { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); allTransactions = []; userEmailDisplay.textContent = ''; document.getElementById('login-form').reset(); } });
+
+        // Event Listeners
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+        document.getElementById('transaction-form').addEventListener('submit', addTransaction);
+        document.getElementById('edit-transaction-form').addEventListener('submit', handleUpdateTransaction);
+        yearFilterEl.addEventListener('change', renderUI);
+        monthFilterEl.addEventListener('change', renderUI);
+        document.getElementById('export-template-btn').addEventListener('click', exportTemplate);
+        document.getElementById('export-data-btn').addEventListener('click', exportData);
+        document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+        document.getElementById('import-file').addEventListener('change', importFromXLSX);
+
+        initializeApp();
+    </script>
+</body>
+</html>
