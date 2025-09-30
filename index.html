@@ -212,41 +212,26 @@
             const listEl = document.getElementById('list');
             listEl.innerHTML = '';
             if (transactions.length === 0) { listEl.innerHTML = '<p>ไม่พบรายการในเดือนนี้</p>'; return; }
-
-            const groupedByType = transactions.reduce((groups, t) => {
-                const type = t.type;
-                if (!groups[type]) { groups[type] = []; }
-                groups[type].push(t);
-                return groups;
-            }, {});
-
+            const groupedByType = transactions.reduce((groups, t) => { const type = t.type; if (!groups[type]) { groups[type] = []; } groups[type].push(t); return groups; }, {});
             const groupOrder = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)'];
-
             groupOrder.forEach(type => {
                 if (!groupedByType[type]) return; 
-
                 const groupContainer = document.createElement('div');
                 const header = document.createElement('div');
                 header.className = 'list-group-header';
                 header.onclick = () => { subList.classList.toggle('hidden'); };
-                
                 const groupTotal = groupedByType[type].reduce((sum, t) => sum + t.amount, 0);
                 const totalClass = type === 'รายรับ' ? 'positive' : 'negative';
                 const totalSign = type === 'รายรับ' ? '+' : '-';
-                
                 header.innerHTML = `<span>${type}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
-                
                 const subList = document.createElement('ul');
-                // **MODIFIED: Add 'hidden' class to collapse by default**
                 subList.className = 'sub-list hidden';
-                
                 groupedByType[type].forEach(t => {
                     const item = document.createElement('li');
                     item.className = 'transaction-item';
                     const sign = t.type === 'รายรับ' ? '+' : '-';
                     const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
                     const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
-                    
                     item.innerHTML = `<div class="item-details"><span class="item-name">${t.description}</span><span class="item-type">${formattedDate}</span></div><div class="item-actions"><span class="item-amount ${itemClass}">${sign}฿${formatMoney(t.amount)}</span><button class="edit-btn" onclick="openEditModal(${t.id})">แก้ไข</button><button class="delete-btn" onclick="removeTransaction(${t.id})">ลบ</button></div>`;
                     subList.appendChild(item);
                 });
@@ -271,7 +256,36 @@
             tableEl.innerHTML = tableHTML;
         };
 
-        const populateDateFilters = () => { const now = new Date(); const currentYear = now.getFullYear(); const currentMonth = now.getMonth() + 1; yearFilterEl.innerHTML = ''; for (let i = currentYear + 1; i >= currentYear - 5; i--) { const option = document.createElement('option'); option.value = i; option.textContent = i + 543; yearFilterEl.appendChild(option); } const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]; monthFilterEl.innerHTML = ''; thaiMonths.forEach((month, index) => { const option = document.createElement('option'); option.value = index + 1; option.textContent = month; monthFilterEl.appendChild(option); }); yearFilterEl.value = currentYear; monthFilterEl.value = currentMonth; };
+        // **MODIFIED: `populateDateFilters` for long-term use**
+        const populateDateFilters = () => {
+            const START_YEAR = 2025; // Year 2568 BE
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+
+            yearFilterEl.innerHTML = '';
+            // Loop from current year + 1 down to the start year
+            for (let i = currentYear + 1; i >= START_YEAR; i--) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i + 543;
+                yearFilterEl.appendChild(option);
+            }
+
+            const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            monthFilterEl.innerHTML = '';
+            thaiMonths.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index + 1;
+                option.textContent = month;
+                monthFilterEl.appendChild(option);
+            });
+            
+            // Set default value to current year (if it's >= START_YEAR), otherwise default to START_YEAR
+            yearFilterEl.value = Math.max(currentYear, START_YEAR);
+            monthFilterEl.value = currentMonth;
+        };
+        
         const formatMoney = (number) => Number(number).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 
         // ---- EXPORT/IMPORT ----
