@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PUIJOD - Mario Block Edition</title>
     
-    <!-- --- ส่วนที่เพิ่มสำหรับปักหมุด (PWA) --- -->
+    <!-- === ส่วนที่เพิ่มสำหรับปักหมุด (PWA) === -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#E52521">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/9382/9382189.png">
-    <!-- ---------------------------------- -->
+    <!-- =================================== -->
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -20,6 +20,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Press+Start+2P&display=swap');
 
         :root {
+            /* << --- VIBRANT COLORS UPDATED --- >> */
             --primary-color: #43B047; /* Mario Green */
             --danger-color: #ef4444;  /* Vibrant Red */
             --success-color: #22c55e; /* Vibrant Green */
@@ -50,6 +51,7 @@
         }
         .hidden { display: none !important; }
 
+        /* --- MARIO HEADER --- */
         header { 
             text-align: center; 
             margin-bottom: 30px;
@@ -94,6 +96,7 @@
             box-shadow: none;
         }
 
+        /* --- 8-BIT BLOCK SECTIONS --- */
         .section {
             background: var(--mario-brown);
             padding: 25px;
@@ -174,7 +177,7 @@
             margin-bottom: 12px;
         }
         .card .amount { 
-            font-size: 1.4rem;
+            font-size: 1.4rem; /* << --- FONT SIZE ADJUSTED --- >> */
             font-weight: 700;
             color: #000;
             word-break: break-all;
@@ -197,6 +200,7 @@
             color: #fff; 
             font-weight: 500; 
         }
+        .view-toggle-btn:first-child { border-left: none; }
         .view-toggle-btn.active { 
             background-color: var(--primary-color); 
             color: white;
@@ -214,6 +218,7 @@
             align-items: center;
             font-weight: 600;
         }
+        /* Override positive/negative colors for the header for better contrast */
         .list-group-header .positive { color: #80FFAF !important; }
         .list-group-header .negative { color: #FF8A8A !important; }
         
@@ -244,8 +249,9 @@
         @media (min-width: 600px) {
             .dashboard { grid-template-columns: repeat(4, 1fr); }
         }
+        /* === MODIFIED FOR MOBILE VIEW === */
         @media (max-width: 480px) {
-            .dashboard { grid-template-columns: repeat(2, 1fr); }
+            .dashboard { grid-template-columns: repeat(2, 1fr); } /* ปรับเป็น 2 คอลัมน์สำหรับมือถือ */
         }
     </style>
 </head>
@@ -265,21 +271,25 @@
 
         <!-- MAIN APP CONTAINER -->
         <div id="app-container" class="hidden">
+            <!-- MARIO HEADER -->
             <header>
                 <h1>PUIJOD COINS</h1>
                 <p id="user-email-display"></p>
                 <button id="logout-btn">QUIT</button>
             </header>
 
+            <!-- === DATE FILTER MOVED HERE === -->
             <div class="filter-section section" style="display:flex; gap: 15px;">
                 <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
                 <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
             </div>
             
+            <!-- MARIO DASHBOARD -->
             <div class="dashboard">
                 <div class="card"><h3>คงเหลือ (สะสม)</h3><p class="amount" id="balance">฿0.00</p></div>
                 <div class="card"><h3>รายรับ (เดือนนี้)</h3><p class="amount" id="total-income">฿0.00</p></div>
                 <div class="card"><h3>รายจ่าย (เดือนนี้)</h3><p class="amount" id="total-expense">฿0.00</p></div>
+                <!-- === MODIFIED CARD === -->
                 <div class="card"><h3>ผลต่าง (เดือนนี้)</h3><p class="amount" id="monthly-difference">฿0.00</p></div>
             </div>
 
@@ -289,6 +299,7 @@
             </div>
 
             <div id="transaction-view">
+                <!-- Date filter was removed from here -->
                 <div class="section">
                     <h2 class="section-title">ประวัติรายการ</h2>
                     <div id="list"></div>
@@ -342,6 +353,7 @@
         </div>
     </div>
 
+    <!-- Javascript -->
     <script>
         const SUPABASE_URL = "https://fmbympgecspgqtnazrbm.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtYnltcGdlY3NwZ3F0bmF6cmJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDkwOTksImV4cCI6MjA2NjMyNTA5OX0.rqOrNDNRTF7WnDS6utTTKfFoNZKPiMZV_ttqYzYCaJs";
@@ -351,7 +363,7 @@
         let allTransactions = [];
         let currentView = 'transactions';
 
-        // --- ส่วนที่เพิ่มสำหรับปักหมุด (Service Worker) ---
+        // === ส่วนที่เพิ่มสำหรับปักหมุด (Service Worker) ===
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -359,8 +371,9 @@
                     .catch(err => console.log('SW Registration Failed', err));
             });
         }
-        // ------------------------------------------
+        // ==========================================
 
+        // DOM Elements
         const authContainer = document.getElementById('auth-container');
         const appContainer = document.getElementById('app-container');
         const yearFilterEl = document.getElementById('year-filter');
@@ -371,9 +384,11 @@
         const userEmailDisplay = document.getElementById('user-email-display');
         const editModalContainer = document.getElementById('edit-modal-container');
 
+        // ---- AUTH ----
         const handleLogin = async (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const { error } = await db.auth.signInWithPassword({ email, password }); if (error) alert(error.message); };
         const handleLogout = async () => { const { error } = await db.auth.signOut(); if (error) console.error("Logout Error:", error); };
         
+        // ---- CORE APP LOGIC ----
         const fetchAllTransactions = async () => {
             const { data, error } = await db.from('transactions').select('*').order('transaction_date', { ascending: true });
             if (error) { console.error('Error fetching transactions:', error); return; }
@@ -384,7 +399,10 @@
         const addTransaction = async (e) => {
             e.preventDefault();
             const amountValue = parseFloat(document.getElementById('amount').value);
-            if (isNaN(amountValue) || amountValue <= 0) { alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง'); return; }
+            if (isNaN(amountValue) || amountValue <= 0) {
+                alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
+                return;
+            }
             const { data: { user } } = await db.auth.getUser();
             const newTransaction = { user_id: user.id, type: document.getElementById('type').value, description: document.getElementById('description').value, amount: amountValue, transaction_date: transactionDateEl.value };
             const { error } = await db.from('transactions').insert(newTransaction);
@@ -397,10 +415,11 @@
         const removeTransaction = async (id) => {
             if (!confirm('คุณแน่ใจว่าต้องการลบรายการนี้?')) return;
             const { error } = await db.from('transactions').delete().eq('id', id);
-            if (error) { alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            if (error) { console.error('Error deleting transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
             await fetchAllTransactions();
         };
         
+        // ---- EDIT MODAL LOGIC ----
         window.openEditModal = (id) => {
             const transaction = allTransactions.find(t => t.id === id);
             if (!transaction) return;
@@ -416,14 +435,20 @@
 
         const handleUpdateTransaction = async (e) => {
             e.preventDefault();
+            const amountValue = parseFloat(document.getElementById('edit-amount').value);
+            if (isNaN(amountValue) || amountValue <= 0) {
+                alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
+                return;
+            }
             const id = document.getElementById('edit-transaction-id').value;
-            const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: parseFloat(document.getElementById('edit-amount').value), transaction_date: document.getElementById('edit-transaction_date').value };
+            const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: amountValue, transaction_date: document.getElementById('edit-transaction_date').value };
             const { error } = await db.from('transactions').update(updatedTransaction).eq('id', id);
-            if (error) { alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            if (error) { console.error('Error updating transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
             closeEditModal();
             await fetchAllTransactions();
         };
 
+        // ---- UI & FILTERING & VIEW ----
         window.setView = (view) => {
             currentView = view;
             document.querySelectorAll('.view-toggle-btn').forEach(btn => btn.classList.remove('active'));
@@ -437,40 +462,35 @@
             if (!yearFilterEl.value || !monthFilterEl.value) return; 
             const selectedYear = parseInt(yearFilterEl.value);
             const selectedMonth = parseInt(monthFilterEl.value);
-            const monthlyTransactions = allTransactions.filter(t => { 
-                const date = new Date(t.transaction_date); 
-                date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); 
-                return date.getFullYear() === selectedYear && (date.getMonth() + 1) === selectedMonth; 
-            });
-            const upToCurrentMonthTransactions = allTransactions.filter(t => { 
-                const transDate = new Date(t.transaction_date); 
-                transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); 
-                const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0); 
-                return transDate <= lastDayOfMonth; 
-            });
+            const monthlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear && (date.getMonth() + 1) === selectedMonth; });
+            const upToCurrentMonthTransactions = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0); return transDate <= lastDayOfMonth; });
             updateDashboard(monthlyTransactions, upToCurrentMonthTransactions);
             if (currentView === 'transactions') { 
                 renderTransactionList(monthlyTransactions.slice().sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date)));
             } else { 
-                const yearlyTransactions = allTransactions.filter(t => { 
-                    const date = new Date(t.transaction_date); 
-                    date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); 
-                    return date.getFullYear() === selectedYear; 
-                });
+                const yearlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear; });
                 renderSummary(yearlyTransactions, selectedYear);
             }
         };
         
+        // === JAVASCRIPT LOGIC UPDATED HERE ===
         const updateDashboard = (monthlyTransactions, upToCurrentMonthTransactions) => {
             const { income, totalExpense } = monthlyTransactions.reduce((acc, t) => {
-                if (t.type === 'รายรับ') acc.income += t.amount; else acc.totalExpense += t.amount;
+                if (t.type === 'รายรับ') {
+                    acc.income += t.amount;
+                } else { // Handles both 'รายจ่าย' and 'รายจ่าย (บัตรเครดิต)'
+                    acc.totalExpense += t.amount;
+                }
                 return acc;
             }, { income: 0, totalExpense: 0 });
+
             const difference = income - totalExpense;
             const cumulativeBalance = upToCurrentMonthTransactions.reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
+
             document.getElementById('balance').innerHTML = `฿${formatMoney(cumulativeBalance)}`;
             document.getElementById('total-income').innerHTML = `฿${formatMoney(income)}`;
             document.getElementById('total-expense').innerHTML = `฿${formatMoney(totalExpense)}`;
+
             const differenceEl = document.getElementById('monthly-difference');
             differenceEl.innerHTML = `฿${formatMoney(difference)}`;
             differenceEl.classList.toggle('positive', difference >= 0);
@@ -501,7 +521,7 @@
                     const sign = t.type === 'รายรับ' ? '+' : '-';
                     const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
                     const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
-                    item.innerHTML = `<div style="display:flex; flex-direction: column; gap: 4px;"><span style="font-weight: 500;">${t.description}</span><span style="font-size: 0.85rem; color: #666;">${formattedDate}</span></div><div style="display:flex; align-items:center; gap: 8px;"><span class="${itemClass}" style="font-weight: 600; margin-right: 10px;">${sign}฿${formatMoney(t.amount)}</span><button onclick="openEditModal(${t.id})" style="background:#f59e0b; width:auto; padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white; box-shadow:none;">แก้ไข</button><button onclick="removeTransaction(${t.id})" style="background:var(--danger-color); width:auto; padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white; box-shadow:none;">ลบ</button></div>`;
+                    item.innerHTML = `<div class="item-details" style="display:flex; flex-direction: column; gap: 4px;"><span class="item-name" style="font-weight: 500;">${t.description}</span><span class="item-type" style="font-size: 0.85rem; color: #666;">${formattedDate}</span></div><div class="item-actions" style="display:flex; align-items:center; gap: 8px;"><span class="item-amount ${itemClass}" style="font-weight: 600; margin-right: 10px;">${sign}฿${formatMoney(t.amount)}</span><button class="edit-btn" onclick="openEditModal(${t.id})" style="background:#f59e0b; padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">แก้ไข</button><button class="delete-btn" onclick="removeTransaction(${t.id})" style="background:var(--danger-color); padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">ลบ</button></div>`;
                     subList.appendChild(item);
                 });
                 groupContainer.appendChild(header);
@@ -513,62 +533,89 @@
         const renderSummary = (yearlyTransactions, year) => {
             document.getElementById('summary-year-title').innerText = `พ.ศ. ${year + 543}`;
             const startDateOfYear = new Date(year, 0, 1);
-            let runningBalance = allTransactions.filter(t => { 
-                const transDate = new Date(t.transaction_date); 
-                transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); 
-                return transDate < startDateOfYear; 
-            }).reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
+            let runningBalance = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); return transDate < startDateOfYear; }).reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
             const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             let summaryData = Array(12).fill(0).map((_, i) => ({ month: thaiMonths[i], income: 0, expense: 0, credit: 0 }));
-            yearlyTransactions.forEach(t => { 
-                const date = new Date(t.transaction_date); 
-                date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); 
-                const monthIndex = date.getMonth(); 
-                if (t.type === 'รายรับ') summaryData[monthIndex].income += t.amount; else if (t.type === 'รายจ่าย') summaryData[monthIndex].expense += t.amount; else if (t.type === 'รายจ่าย (บัตรเครดิต)') summaryData[monthIndex].credit += t.amount; 
-            });
+            yearlyTransactions.forEach(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); const monthIndex = date.getMonth(); if (t.type === 'รายรับ') summaryData[monthIndex].income += t.amount; else if (t.type === 'รายจ่าย') summaryData[monthIndex].expense += t.amount; else if (t.type === 'รายจ่าย (บัตรเครดิต)') summaryData[monthIndex].credit += t.amount; });
             const tableEl = document.getElementById('summary-table');
             let tableHTML = `<thead><tr style="background-color: #f0f0f0;"><th style="padding: 12px 8px; text-align: center;">เดือน</th><th style="padding: 12px 8px; text-align: center;">รายรับ</th><th style="padding: 12px 8px; text-align: center;">รายจ่าย</th><th style="padding: 12px 8px; text-align: center;">บัตรเครดิต</th><th style="padding: 12px 8px; text-align: center;">คงเหลือสะสม</th></tr></thead><tbody>`;
             let total = { income: 0, expense: 0, credit: 0 };
             summaryData.forEach(data => { 
                 runningBalance += data.income - (data.expense + data.credit); 
-                total.income += data.income; total.expense += data.expense; total.credit += data.credit; 
-                tableHTML += `<tr style="border-bottom: 1px solid #ddd;"><td style="text-align: left; padding: 12px 8px; font-weight: 500;">${data.month}</td><td class="positive" style="text-align: right; padding: 12px 8px;">${formatMoney(data.income)}</td><td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(data.expense)}</td><td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(data.credit)}</td><td class="${runningBalance >= 0 ? 'positive' : 'negative'}" style="text-align: right; padding: 12px 8px;">${formatMoney(runningBalance)}</td></tr>`; 
+                total.income += data.income; 
+                total.expense += data.expense; 
+                total.credit += data.credit; 
+                tableHTML += `<tr style="border-bottom: 1px solid #ddd;">
+                                <td style="text-align: left; padding: 12px 8px; font-weight: 500;">${data.month}</td>
+                                <td class="positive" style="text-align: right; padding: 12px 8px;">${formatMoney(data.income)}</td>
+                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(data.expense)}</td>
+                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(data.credit)}</td>
+                                <td class="${runningBalance >= 0 ? 'positive' : 'negative'}" style="text-align: right; padding: 12px 8px;">${formatMoney(runningBalance)}</td>
+                              </tr>`; 
             });
-            tableHTML += `</tbody><tfoot style="font-weight: bold; background-color: #f0f0f0;"><tr><td style="text-align: left; padding: 12px 8px;">รวม</td><td class="positive" style="text-align: right; padding: 12px 8px;">${formatMoney(total.income)}</td><td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(total.expense)}</td><td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(total.credit)}</td><td class="${runningBalance >= 0 ? 'positive' : 'negative'}" style="text-align: right; padding: 12px 8px;">${formatMoney(runningBalance)}</td></tr></tfoot>`;
+            tableHTML += `</tbody><tfoot style="font-weight: bold; background-color: #f0f0f0;">
+                            <tr>
+                                <td style="text-align: left; padding: 12px 8px;">รวม</td>
+                                <td class="positive" style="text-align: right; padding: 12px 8px;">${formatMoney(total.income)}</td>
+                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(total.expense)}</td>
+                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(total.credit)}</td>
+                                <td class="${runningBalance >= 0 ? 'positive' : 'negative'}" style="text-align: right; padding: 12px 8px;">${formatMoney(runningBalance)}</td>
+                            </tr>
+                          </tfoot>`;
             tableEl.innerHTML = tableHTML;
         };
 
         const populateDateFilters = () => {
-            const START_YEAR = 2024; const now = new Date(); const currentYear = now.getFullYear(); const currentMonth = now.getMonth() + 1;
-            yearFilterEl.innerHTML = ''; for (let i = currentYear + 1; i >= START_YEAR; i--) { const option = document.createElement('option'); option.value = i; option.textContent = i + 543; yearFilterEl.appendChild(option); }
+            const START_YEAR = 2024; 
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+
+            yearFilterEl.innerHTML = '';
+            for (let i = currentYear + 1; i >= START_YEAR; i--) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i + 543;
+                yearFilterEl.appendChild(option);
+            }
+
             const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            monthFilterEl.innerHTML = ''; thaiMonths.forEach((month, index) => { const option = document.createElement('option'); option.value = index + 1; option.textContent = month; monthFilterEl.appendChild(option); });
-            yearFilterEl.value = Math.max(currentYear, START_YEAR); monthFilterEl.value = currentMonth;
+            monthFilterEl.innerHTML = '';
+            thaiMonths.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index + 1;
+                option.textContent = month;
+                monthFilterEl.appendChild(option);
+            });
+            
+            yearFilterEl.value = Math.max(currentYear, START_YEAR);
+            monthFilterEl.value = currentMonth;
         };
         
         const formatMoney = (number) => Number(number).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 
         const XLSX_HEADERS = ['transaction_date', 'type', 'description', 'amount'];
-        const exportTemplate = () => { const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([ XLSX_HEADERS ]); XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "template.xlsx"); };
-        const exportData = () => { if (allTransactions.length === 0) { alert("ไม่มีข้อมูล"); return; } const dataToExport = allTransactions.map(({ id, user_id, created_at, ...rest }) => ({...rest, transaction_date: rest.transaction_date })); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport, { header: XLSX_HEADERS }); XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "export.xlsx"); };
-        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates:true }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet); const { data: { user } } = await db.auth.getUser(); const newTransactions = json.map(row => ({ user_id: user.id, transaction_date: row.transaction_date, type: row.type, description: row.description, amount: row.amount })); await db.from('transactions').insert(newTransactions); alert('Import สำเร็จ!'); await fetchAllTransactions(); } catch (err) { alert('เกิดข้อผิดพลาดในการ Import'); } }; reader.readAsBinaryString(file); };
+        const exportTemplate = () => { const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([ XLSX_HEADERS ]); const dropdownOptions = '"รายรับ,รายจ่าย,รายจ่าย (บัตรเครดิต)"'; ws['!dataValidation'] = [{ sqref: 'B2:B1000', opts: { type: 'list', allowBlank: true, formula1: dropdownOptions, showDropDown: true, errorStyle: 'warning', error: 'กรุณาเลือกจากรายการ', errorTitle: 'ข้อมูลไม่ถูกต้อง' } }]; XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "template.xlsx"); };
+        const exportData = () => { if (allTransactions.length === 0) { alert("ไม่มีข้อมูลสำหรับ Export"); return; } const dataToExport = allTransactions.map(({ id, user_id, created_at, ...rest }) => ({...rest, transaction_date: new Date(rest.transaction_date).toLocaleDateString('en-CA') })); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport, { header: XLSX_HEADERS }); XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "transactions_export.xlsx"); };
+        const formatDateForSupabase = (excelDate) => { try { if (excelDate instanceof Date) { return excelDate.toISOString().split('T')[0]; } if (typeof excelDate === 'number') { const jsDate = new Date(Math.round((excelDate - 25569) * 86400 * 1000)); return jsDate.toISOString().split('T')[0]; } if (typeof excelDate === 'string' && excelDate.match(/^\d{4}-\d{2}-\d{2}$/)) { return excelDate; } throw new Error("Invalid date format"); } catch (e) { console.error("Could not parse date:", excelDate); return null; } };
+        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates:true }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } alert(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ!`); await fetchAllTransactions(); } else { alert('ไม่พบข้อมูลที่ถูกต้องในไฟล์'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); alert('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
 
-        const initializeApp = async () => { 
-            const { data: { session } } = await db.auth.getSession(); 
-            if (session) { authContainer.classList.add('hidden'); appContainer.classList.remove('hidden'); userEmailDisplay.textContent = session.user.email; transactionDateEl.valueAsDate = new Date(); populateDateFilters(); await fetchAllTransactions(); } 
-            else { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); } 
-        };
+        // ---- APP INITIALIZATION ----
+        const initializeApp = async () => { const { data: { session } } = await db.auth.getSession(); if (session) { authContainer.classList.add('hidden'); appContainer.classList.remove('hidden'); userEmailDisplay.textContent = session.user.email; transactionDateEl.valueAsDate = new Date(); populateDateFilters(); await fetchAllTransactions(); } else { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); } };
+        db.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_IN') { initializeApp(); } else if (event === 'SIGNED_OUT') { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); allTransactions = []; userEmailDisplay.textContent = ''; document.getElementById('login-form').reset(); } });
 
-        db.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_IN') initializeApp(); else if (event === 'SIGNED_OUT') location.reload(); });
+        // Event Listeners
         document.getElementById('login-form').addEventListener('submit', handleLogin);
         document.getElementById('logout-btn').addEventListener('click', handleLogout);
         document.getElementById('transaction-form').addEventListener('submit', addTransaction);
         document.getElementById('edit-transaction-form').addEventListener('submit', handleUpdateTransaction);
-        yearFilterEl.addEventListener('change', renderUI); monthFilterEl.addEventListener('change', renderUI);
+        yearFilterEl.addEventListener('change', renderUI);
+        monthFilterEl.addEventListener('change', renderUI);
         document.getElementById('export-template-btn').addEventListener('click', exportTemplate);
         document.getElementById('export-data-btn').addEventListener('click', exportData);
         document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
         document.getElementById('import-file').addEventListener('change', importFromXLSX);
+
         initializeApp();
     </script>
 </body>
