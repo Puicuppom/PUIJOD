@@ -1,5 +1,5 @@
 {
-  "name": "PUIJOD Money Tracker",
+  "name": "PUIJOD - Mario Money Tracker",
   "short_name": "PUIJOD",
   "start_url": "index.html",
   "display": "standalone",
@@ -7,7 +7,7 @@
   "theme_color": "#E52521",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/588/588257.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/9382/9382189.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
