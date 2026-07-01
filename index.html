@@ -326,10 +326,16 @@
                 </form>
             </div>
             
-             <div class="section actions-section" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                <button class="action-btn" id="export-template-btn" style="background-color: #6c757d;">Export Template</button>
-                <button class="action-btn" id="export-data-btn" style="background-color: #6c757d;">Export Data</button>
-                <button class="action-btn" id="import-btn" style="background-color: #6c757d;">Import XLSX</button>
+             <div class="section actions-section">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="export-year-filter">ปีที่ Export</label>
+                    <select id="export-year-filter"></select>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <button class="action-btn" id="export-template-btn" style="background-color: #6c757d;">Export Template</button>
+                    <button class="action-btn" id="export-data-btn" style="background-color: #6c757d;">Export Data</button>
+                    <button class="action-btn" id="import-btn" style="background-color: #6c757d;">Import XLSX</button>
+                </div>
                 <input type="file" id="import-file" class="hidden" accept=".xlsx, .xls">
             </div>
         </div>
@@ -378,6 +384,7 @@
         const appContainer = document.getElementById('app-container');
         const yearFilterEl = document.getElementById('year-filter');
         const monthFilterEl = document.getElementById('month-filter');
+        const exportYearFilterEl = document.getElementById('export-year-filter');
         const transactionDateEl = document.getElementById('transaction_date');
         const transactionView = document.getElementById('transaction-view');
         const summaryView = document.getElementById('summary-view');
@@ -565,19 +572,28 @@
             tableEl.innerHTML = tableHTML;
         };
 
-        const populateDateFilters = () => {
-            const START_YEAR = 2024; 
+        const START_YEAR = 2024;
+
+        const populateYearSelect = (selectEl, selectedYear) => {
             const now = new Date();
             const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1;
-
-            yearFilterEl.innerHTML = '';
+            selectEl.innerHTML = '';
             for (let i = currentYear + 1; i >= START_YEAR; i--) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i + 543;
-                yearFilterEl.appendChild(option);
+                selectEl.appendChild(option);
             }
+            selectEl.value = selectedYear ?? Math.max(currentYear, START_YEAR);
+        };
+
+        const populateDateFilters = () => {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+
+            populateYearSelect(yearFilterEl, Math.max(currentYear, START_YEAR));
+            populateYearSelect(exportYearFilterEl, Math.max(currentYear, START_YEAR));
 
             const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             monthFilterEl.innerHTML = '';
@@ -588,17 +604,74 @@
                 monthFilterEl.appendChild(option);
             });
             
-            yearFilterEl.value = Math.max(currentYear, START_YEAR);
             monthFilterEl.value = currentMonth;
         };
         
         const formatMoney = (number) => Number(number).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 
         const XLSX_HEADERS = ['transaction_date', 'type', 'description', 'amount'];
+
+        const excelSerialToDateString = (serial) => {
+            const utcDays = Math.floor(serial) - 25569;
+            const jsDate = new Date(utcDays * 86400000);
+            const y = jsDate.getUTCFullYear();
+            const m = String(jsDate.getUTCMonth() + 1).padStart(2, '0');
+            const d = String(jsDate.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const parseThaiSlashDate = (value) => {
+            const match = String(value).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+            if (!match) return null;
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            let year = parseInt(match[3], 10);
+            if (year < 100) {
+                year = year >= 40 ? year + 2500 - 543 : 2000 + year;
+            } else if (year > 2400) {
+                year = year - 543;
+            }
+            if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        };
+
+        const formatDateForSupabase = (excelDate) => {
+            try {
+                if (typeof excelDate === 'number') {
+                    return excelSerialToDateString(excelDate);
+                }
+                if (excelDate instanceof Date && !isNaN(excelDate)) {
+                    return excelSerialToDateString(25569 + excelDate.getTime() / 86400000);
+                }
+                if (typeof excelDate === 'string') {
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(excelDate)) return excelDate;
+                    const thaiDate = parseThaiSlashDate(excelDate);
+                    if (thaiDate) return thaiDate;
+                }
+                throw new Error('Invalid date format');
+            } catch (e) {
+                console.error('Could not parse date:', excelDate);
+                return null;
+            }
+        };
+
+        const getTransactionYear = (transactionDate) => parseInt(String(transactionDate).slice(0, 4), 10);
+
         const exportTemplate = () => { const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([ XLSX_HEADERS ]); const dropdownOptions = '"รายรับ,รายจ่าย,รายจ่าย (บัตรเครดิต)"'; ws['!dataValidation'] = [{ sqref: 'B2:B1000', opts: { type: 'list', allowBlank: true, formula1: dropdownOptions, showDropDown: true, errorStyle: 'warning', error: 'กรุณาเลือกจากรายการ', errorTitle: 'ข้อมูลไม่ถูกต้อง' } }]; XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "template.xlsx"); };
-        const exportData = () => { if (allTransactions.length === 0) { alert("ไม่มีข้อมูลสำหรับ Export"); return; } const dataToExport = allTransactions.map(({ id, user_id, created_at, ...rest }) => ({...rest, transaction_date: new Date(rest.transaction_date).toLocaleDateString('en-CA') })); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport, { header: XLSX_HEADERS }); XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "transactions_export.xlsx"); };
-        const formatDateForSupabase = (excelDate) => { try { if (excelDate instanceof Date) { return excelDate.toISOString().split('T')[0]; } if (typeof excelDate === 'number') { const jsDate = new Date(Math.round((excelDate - 25569) * 86400 * 1000)); return jsDate.toISOString().split('T')[0]; } if (typeof excelDate === 'string' && excelDate.match(/^\d{4}-\d{2}-\d{2}$/)) { return excelDate; } throw new Error("Invalid date format"); } catch (e) { console.error("Could not parse date:", excelDate); return null; } };
-        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates:true }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } alert(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ!`); await fetchAllTransactions(); } else { alert('ไม่พบข้อมูลที่ถูกต้องในไฟล์'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); alert('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
+        const exportData = () => {
+            const exportYear = parseInt(exportYearFilterEl.value, 10);
+            const filtered = allTransactions.filter(t => getTransactionYear(t.transaction_date) === exportYear);
+            if (filtered.length === 0) {
+                alert(`ไม่มีข้อมูลสำหรับ Export ในปี ${exportYear + 543}`);
+                return;
+            }
+            const dataToExport = filtered.map(({ id, user_id, created_at, ...rest }) => ({ ...rest, transaction_date: rest.transaction_date }));
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(dataToExport, { header: XLSX_HEADERS });
+            XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+            XLSX.writeFile(wb, `transactions_${exportYear + 543}.xlsx`);
+        };
+        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates: false }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet, { raw: true }); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } alert(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ!`); await fetchAllTransactions(); } else { alert('ไม่พบข้อมูลที่ถูกต้องในไฟล์'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); alert('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
 
         // ---- APP INITIALIZATION ----
         const initializeApp = async () => { const { data: { session } } = await db.auth.getSession(); if (session) { authContainer.classList.add('hidden'); appContainer.classList.remove('hidden'); userEmailDisplay.textContent = session.user.email; transactionDateEl.valueAsDate = new Date(); populateDateFilters(); await fetchAllTransactions(); } else { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); } };
@@ -609,7 +682,10 @@
         document.getElementById('logout-btn').addEventListener('click', handleLogout);
         document.getElementById('transaction-form').addEventListener('submit', addTransaction);
         document.getElementById('edit-transaction-form').addEventListener('submit', handleUpdateTransaction);
-        yearFilterEl.addEventListener('change', renderUI);
+        yearFilterEl.addEventListener('change', () => {
+            exportYearFilterEl.value = yearFilterEl.value;
+            renderUI();
+        });
         monthFilterEl.addEventListener('change', renderUI);
         document.getElementById('export-template-btn').addEventListener('click', exportTemplate);
         document.getElementById('export-data-btn').addEventListener('click', exportData);
