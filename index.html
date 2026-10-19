@@ -253,6 +253,76 @@
         @media (max-width: 480px) {
             .dashboard { grid-template-columns: repeat(2, 1fr); } /* ปรับเป็น 2 คอลัมน์สำหรับมือถือ */
         }
+
+        /* === [NEW] ความสะดวก === */
+        #app-container { padding-bottom: 90px; }
+
+        /* ปุ่ม + ลอย (บล็อก ? สไตล์มาริโอ้) */
+        .fab {
+            position: fixed; right: 20px; bottom: 20px; z-index: 90;
+            width: 64px; height: 64px; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--mario-yellow); color: #000;
+            font-family: 'Press Start 2P', cursive; font-size: 1.6rem; line-height: 1;
+            border: 4px solid #000; box-shadow: 4px 4px 0 #000;
+        }
+        .fab:active { transform: translate(4px, 4px); box-shadow: none; }
+
+        /* แถบเลือกเดือน */
+        .month-nav { display: flex; gap: 10px; align-items: flex-end; }
+        .month-nav .form-group { flex: 1; min-width: 0; margin-bottom: 0; }
+        .month-nav .form-group select { padding: 12px 6px; }
+        .month-nav .nav-btn {
+            width: 48px; flex: 0 0 48px; height: 46px; padding: 0;
+            background: var(--mario-dark-brown); font-size: 1.1rem;
+        }
+        .month-nav .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* ช่องค้นหา */
+        .search-box { position: relative; margin-bottom: 15px; }
+        .search-box input::-webkit-search-cancel-button { display: none; }
+        .search-box input {
+            width: 100%; padding: 12px 44px 12px 15px; border: 2px solid #000;
+            font-family: 'Kanit', sans-serif; font-size: 1rem; box-shadow: inset 2px 2px 0 rgba(0,0,0,0.5);
+        }
+        .search-box .clear-btn {
+            position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+            width: 32px; height: 32px; padding: 0; box-shadow: none; border: none;
+            background: transparent; color: #000; font-size: 1.2rem;
+        }
+        .search-summary {
+            background: var(--mario-dark-brown); border: 2px solid #000; padding: 10px 15px;
+            display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-weight: 600;
+        }
+
+        /* ปุ่มในแต่ละรายการ */
+        .transaction-item { flex-wrap: wrap; gap: 8px; }
+        .item-actions button {
+            width: auto; display: inline-block; padding: 6px 10px; font-size: 0.8rem;
+            border-radius: 8px; border: none; color: #fff; box-shadow: none;
+        }
+        .item-actions .dup-btn { background: #3b82f6; }
+        .item-actions .edit-btn { background: #f59e0b; }
+        .item-actions .delete-btn { background: var(--danger-color); }
+
+        /* Toast แจ้งเตือน */
+        #toast-host {
+            position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%);
+            z-index: 200; display: flex; flex-direction: column; gap: 8px;
+            width: calc(100% - 32px); max-width: 420px; pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            background: #fff; color: #000; border: 3px solid #000; box-shadow: 4px 4px 0 #000;
+            padding: 10px 14px; font-weight: 500; animation: toast-in 0.15s ease-out;
+        }
+        .toast.success { background: #dcfce7; }
+        .toast.error { background: #fee2e2; }
+        .toast .toast-action {
+            width: auto; padding: 6px 12px; font-size: 0.9rem; flex: 0 0 auto;
+            background: var(--mario-red); box-shadow: 2px 2px 0 #000;
+        }
+        @keyframes toast-in { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
     </style>
 </head>
 <body>
@@ -279,9 +349,11 @@
             </header>
 
             <!-- === DATE FILTER MOVED HERE === -->
-            <div class="filter-section section" style="display:flex; gap: 15px;">
-                <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
-                <div class="form-group" style="flex:1; margin-bottom: 0;"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
+            <div class="filter-section section month-nav">
+                <button type="button" class="nav-btn" id="prev-month-btn" aria-label="เดือนก่อนหน้า">◀</button>
+                <div class="form-group"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
+                <div class="form-group"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
+                <button type="button" class="nav-btn" id="next-month-btn" aria-label="เดือนถัดไป">▶</button>
             </div>
             
             <!-- MARIO DASHBOARD -->
@@ -302,6 +374,10 @@
                 <!-- Date filter was removed from here -->
                 <div class="section">
                     <h2 class="section-title">ประวัติรายการ</h2>
+                    <div class="search-box">
+                        <input type="search" id="search-input" placeholder="🔍 ค้นหาทุกเดือน เช่น กาแฟ, Grab" autocomplete="off" enterkeyhint="search">
+                        <button type="button" class="clear-btn hidden" id="search-clear" aria-label="ล้างคำค้น">✕</button>
+                    </div>
                     <div id="list"></div>
                 </div>
             </div>
@@ -315,17 +391,6 @@
                 </div>
             </div>
 
-            <div class="section">
-                <h2 class="section-title">เพิ่มรายการ</h2>
-                <form id="transaction-form">
-                    <div class="form-group"><label for="type">ประเภท</label><select id="type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div>
-                    <div class="form-group"><label for="description">รายละเอียด</label><input type="text" id="description" required></div>
-                    <div class="form-group"><label for="amount">จำนวนเงิน</label><input type="number" step="0.01" id="amount" required></div>
-                    <div class="form-group"><label for="transaction_date">วันที่</label><input type="date" id="transaction_date" required></div>
-                    <button type="submit">เพิ่มรายการ</button>
-                </form>
-            </div>
-            
              <div class="section actions-section">
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label for="export-year-filter">ปีที่ Export</label>
@@ -338,8 +403,31 @@
                 </div>
                 <input type="file" id="import-file" class="hidden" accept=".xlsx, .xls">
             </div>
+
+            <!-- [NEW] ปุ่ม + ลอย -->
+            <button type="button" class="fab" id="add-fab" aria-label="เพิ่มรายการ">+</button>
         </div>
     </div>
+
+    <!-- [NEW] ADD TRANSACTION MODAL -->
+    <div id="add-modal-container" class="modal-container hidden">
+        <div class="modal-content">
+            <h2 class="section-title">เพิ่มรายการ</h2>
+            <form id="transaction-form" autocomplete="off">
+                <div class="form-group"><label for="description">รายละเอียด</label><input type="text" id="description" list="desc-suggestions" required enterkeyhint="next"></div>
+                <div class="form-group"><label for="amount">จำนวนเงิน</label><input type="number" step="0.01" min="0.01" id="amount" inputmode="decimal" required></div>
+                <div class="form-group"><label for="type">ประเภท</label><select id="type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div>
+                <div class="form-group"><label for="transaction_date">วันที่</label><input type="date" id="transaction_date" required></div>
+                <div class="modal-actions" style="display:flex; gap: 15px; margin-top: 25px;">
+                    <button type="button" onclick="closeAddModal()" style="background-color: #6c757d;">ยกเลิก</button>
+                    <button type="submit">เพิ่มรายการ</button>
+                </div>
+            </form>
+            <datalist id="desc-suggestions"></datalist>
+        </div>
+    </div>
+
+    <div id="toast-host" aria-live="polite"></div>
     
     <!-- EDIT TRANSACTION MODAL -->
     <div id="edit-modal-container" class="modal-container hidden">
@@ -349,7 +437,7 @@
                 <input type="hidden" id="edit-transaction-id">
                 <div class="form-group"><label for="edit-type">ประเภท</label><select id="edit-type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div>
                 <div class="form-group"><label for="edit-description">รายละเอียด</label><input type="text" id="edit-description" required></div>
-                <div class="form-group"><label for="edit-amount">จำนวนเงิน</label><input type="number" step="0.01" id="edit-amount" required></div>
+                <div class="form-group"><label for="edit-amount">จำนวนเงิน</label><input type="number" step="0.01" min="0.01" id="edit-amount" inputmode="decimal" required></div>
                 <div class="form-group"><label for="edit-transaction_date">วันที่</label><input type="date" id="edit-transaction_date" required></div>
                 <div class="modal-actions" style="display:flex; gap: 15px; margin-top: 25px;">
                     <button type="button" class="btn-secondary" onclick="closeEditModal()" style="background-color: #6c757d;">ยกเลิก</button>
@@ -392,7 +480,7 @@
         const editModalContainer = document.getElementById('edit-modal-container');
 
         // ---- AUTH ----
-        const handleLogin = async (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const { error } = await db.auth.signInWithPassword({ email, password }); if (error) alert(error.message); };
+        const handleLogin = async (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const { error } = await db.auth.signInWithPassword({ email, password }); if (error) toast('เข้าสู่ระบบไม่สำเร็จ: ' + error.message, 'error'); };
         const handleLogout = async () => { const { error } = await db.auth.signOut(); if (error) console.error("Logout Error:", error); };
         
         // ---- CORE APP LOGIC ----
@@ -401,6 +489,37 @@
 
         // [FIX] กันข้อความถูกตีความเป็น HTML
         const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // ---- [NEW] Toast แจ้งเตือนแทน alert ----
+        const toastHost = document.getElementById('toast-host');
+        const toast = (message, kind = 'info', opts = {}) => {
+            const el = document.createElement('div');
+            el.className = `toast ${kind}`;
+            const text = document.createElement('span');
+            text.textContent = message;
+            el.appendChild(text);
+            let timer;
+            const dismiss = () => { clearTimeout(timer); el.remove(); };
+            if (opts.actionLabel && opts.onAction) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'toast-action';
+                btn.textContent = opts.actionLabel;
+                btn.onclick = () => { dismiss(); opts.onAction(); };
+                el.appendChild(btn);
+            }
+            el.addEventListener('click', (ev) => { if (ev.target === el || ev.target === text) dismiss(); });
+            toastHost.appendChild(el);
+            while (toastHost.children.length > 2) toastHost.firstChild.remove();
+            timer = setTimeout(dismiss, opts.duration ?? (kind === 'error' ? 5000 : 2500));
+            return dismiss;
+        };
+
+        // ---- [NEW] จำค่าในเครื่อง (ถ้าใช้ไม่ได้ก็ข้ามไป) ----
+        const store = {
+            get: (k, fallback) => { try { const v = localStorage.getItem('puijod.' + k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
+            set: (k, v) => { try { localStorage.setItem('puijod.' + k, JSON.stringify(v)); } catch {} },
+        };
 
         // [FIX] ปิดปุ่ม submit ระหว่างบันทึก กันกดซ้ำแล้วได้รายการซ้ำ
         const withBusyForm = async (form, fn) => {
@@ -422,14 +541,62 @@
                     .order('transaction_date', { ascending: true })
                     .order('id', { ascending: true })
                     .range(from, from + PAGE_SIZE - 1);
-                if (error) { console.error('Error fetching transactions:', error); alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message); return; }
+                if (error) { console.error('Error fetching transactions:', error); toast('โหลดข้อมูลไม่สำเร็จ: ' + error.message, 'error'); return; }
                 rows = rows.concat(data);
                 if (data.length < PAGE_SIZE) break;
                 from += PAGE_SIZE;
             }
             allTransactions = rows.map(t => ({ ...t, amount: Number(t.amount) }));
+            rebuildSuggestions();
             renderUI();
         };
+
+        // ---- [NEW] รายละเอียดเติมให้เอง: จำรายการล่าสุดของแต่ละชื่อ ----
+        let lastByDescription = new Map();
+        const descKey = (s) => String(s ?? '').trim().toLowerCase();
+        const rebuildSuggestions = () => {
+            const sorted = allTransactions.slice().sort((a, b) =>
+                a.transaction_date < b.transaction_date ? 1 : a.transaction_date > b.transaction_date ? -1 : (Number(b.id) || 0) - (Number(a.id) || 0));
+            lastByDescription = new Map();
+            for (const t of sorted) {
+                const k = descKey(t.description);
+                if (k && !lastByDescription.has(k)) lastByDescription.set(k, t);
+            }
+            const datalist = document.getElementById('desc-suggestions');
+            datalist.innerHTML = '';
+            let n = 0;
+            for (const t of lastByDescription.values()) {
+                if (n++ >= 300) break;
+                const opt = document.createElement('option');
+                opt.value = t.description;
+                datalist.appendChild(opt);
+            }
+        };
+
+        let amountAutoFilled = false;
+        const applySuggestion = () => {
+            const match = lastByDescription.get(descKey(document.getElementById('description').value));
+            if (!match) return;
+            const amountEl = document.getElementById('amount');
+            if (amountEl.value === '' || amountAutoFilled) {
+                amountEl.value = match.amount;
+                amountAutoFilled = true;
+            }
+            document.getElementById('type').value = match.type;
+        };
+
+        // ---- [NEW] Modal เพิ่มรายการ ----
+        const addModalContainer = document.getElementById('add-modal-container');
+        window.openAddModal = () => {
+            const form = document.getElementById('transaction-form');
+            form.reset();
+            amountAutoFilled = false;
+            document.getElementById('type').value = store.get('lastType', 'รายจ่าย');
+            transactionDateEl.value = todayLocal();
+            addModalContainer.classList.remove('hidden');
+            setTimeout(() => document.getElementById('description').focus(), 50);
+        };
+        window.closeAddModal = () => { addModalContainer.classList.add('hidden'); };
 
         const addTransaction = async (e) => {
             e.preventDefault();
@@ -437,24 +604,65 @@
             await withBusyForm(form, async () => {
                 const amountValue = parseFloat(document.getElementById('amount').value);
                 if (isNaN(amountValue) || amountValue <= 0) {
-                    alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
+                    toast('กรุณาป้อนจำนวนเงินที่ถูกต้อง', 'error');
                     return;
                 }
                 const { data: { user } } = await db.auth.getUser();
-                if (!user) { alert('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); return; }
-                const newTransaction = { user_id: user.id, type: document.getElementById('type').value, description: document.getElementById('description').value, amount: amountValue, transaction_date: transactionDateEl.value };
+                if (!user) { toast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error'); return; }
+                const type = document.getElementById('type').value;
+                const description = document.getElementById('description').value.trim();
+                const newTransaction = { user_id: user.id, type, description, amount: amountValue, transaction_date: transactionDateEl.value };
                 const { error } = await db.from('transactions').insert(newTransaction);
-                if (error) { console.error('Error adding transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
-                await fetchAllTransactions();
+                if (error) { console.error('Error adding transaction:', error); toast('เกิดข้อผิดพลาด: ' + error.message, 'error'); return; }
+                store.set('lastType', type);
+                closeAddModal();
                 form.reset();
-                transactionDateEl.value = todayLocal();
+                toast(`บันทึก "${description}" แล้ว ✓`, 'success');
+                await fetchAllTransactions();
             });
         };
 
+        // ---- [NEW] ลบทันที แล้วกด "เลิกทำ" ได้ ----
+        const restorableFields = ({ user_id, type, description, amount, transaction_date }) => ({ user_id, type, description, amount, transaction_date });
+
         const removeTransaction = async (id) => {
-            if (!confirm('คุณแน่ใจว่าต้องการลบรายการนี้?')) return;
+            const target = allTransactions.find(t => String(t.id) === String(id));
+            if (!target) return;
             const { error } = await db.from('transactions').delete().eq('id', id);
-            if (error) { console.error('Error deleting transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            if (error) { console.error('Error deleting transaction:', error); toast('เกิดข้อผิดพลาด: ' + error.message, 'error'); return; }
+            toast(`ลบ "${target.description}" แล้ว`, 'info', {
+                duration: 6000,
+                actionLabel: 'เลิกทำ',
+                onAction: async () => {
+                    const { error: undoError } = await db.from('transactions').insert(restorableFields(target));
+                    if (undoError) { toast('กู้คืนไม่สำเร็จ: ' + undoError.message, 'error'); return; }
+                    toast('กู้คืนแล้ว ✓', 'success');
+                    await fetchAllTransactions();
+                },
+            });
+            await fetchAllTransactions();
+        };
+
+        // ---- [NEW] ทำซ้ำรายการเป็นของวันนี้ ----
+        const duplicateTransaction = async (id) => {
+            const source = allTransactions.find(t => String(t.id) === String(id));
+            if (!source) return;
+            const { data: { user } } = await db.auth.getUser();
+            if (!user) { toast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error'); return; }
+            const copy = { ...restorableFields(source), user_id: user.id, transaction_date: todayLocal() };
+            const { data, error } = await db.from('transactions').insert(copy).select('id');
+            if (error) { console.error('Error duplicating transaction:', error); toast('เกิดข้อผิดพลาด: ' + error.message, 'error'); return; }
+            const newId = data && data[0] ? data[0].id : null;
+            toast(`เพิ่ม "${source.description}" เป็นของวันนี้แล้ว`, 'success', newId == null ? {} : {
+                duration: 6000,
+                actionLabel: 'เลิกทำ',
+                onAction: async () => {
+                    const { error: undoError } = await db.from('transactions').delete().eq('id', newId);
+                    if (undoError) { toast('เลิกทำไม่สำเร็จ: ' + undoError.message, 'error'); return; }
+                    toast('เลิกทำแล้ว', 'info');
+                    await fetchAllTransactions();
+                },
+            });
             await fetchAllTransactions();
         };
         
@@ -477,14 +685,15 @@
             await withBusyForm(e.currentTarget, async () => {
                 const amountValue = parseFloat(document.getElementById('edit-amount').value);
                 if (isNaN(amountValue) || amountValue <= 0) {
-                    alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
+                    toast('กรุณาป้อนจำนวนเงินที่ถูกต้อง', 'error');
                     return;
                 }
                 const id = document.getElementById('edit-transaction-id').value;
                 const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: amountValue, transaction_date: document.getElementById('edit-transaction_date').value };
                 const { error } = await db.from('transactions').update(updatedTransaction).eq('id', id);
-                if (error) { console.error('Error updating transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+                if (error) { console.error('Error updating transaction:', error); toast('เกิดข้อผิดพลาด: ' + error.message, 'error'); return; }
                 closeEditModal();
+                toast('บันทึกการแก้ไขแล้ว ✓', 'success');
                 await fetchAllTransactions();
             });
         };
@@ -506,9 +715,12 @@
             const monthlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear && (date.getMonth() + 1) === selectedMonth; });
             const upToCurrentMonthTransactions = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0); return transDate <= lastDayOfMonth; });
             updateDashboard(monthlyTransactions, upToCurrentMonthTransactions);
-            if (currentView === 'transactions') { 
-                renderTransactionList(monthlyTransactions.slice().sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date)));
-            } else { 
+            updateMonthNavButtons();
+            if (currentView === 'transactions') {
+                const query = searchInputEl.value.trim();
+                if (query) renderSearchResults(query);
+                else renderTransactionList(monthlyTransactions.slice().sort(byDateDesc));
+            } else {
                 const yearlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear; });
                 renderSummary(yearlyTransactions, selectedYear);
             }
@@ -538,6 +750,41 @@
             differenceEl.classList.toggle('negative', difference < 0);
         };
         
+        const byDateDesc = (a, b) =>
+            a.transaction_date < b.transaction_date ? 1 : a.transaction_date > b.transaction_date ? -1 : (Number(b.id) || 0) - (Number(a.id) || 0);
+
+        const transactionItemHTML = (t) => {
+            const sign = t.type === 'รายรับ' ? '+' : '-';
+            const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
+            const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
+            const id = esc(t.id);
+            return `<div class="item-details" style="display:flex; flex-direction: column; gap: 4px; flex: 1 1 140px; min-width: 0;"><span class="item-name" style="font-weight: 500; overflow-wrap: anywhere;">${esc(t.description)}</span><span class="item-type" style="font-size: 0.85rem; color: #555;">${formattedDate}</span></div><div class="item-actions" style="display:flex; align-items:center; gap: 6px; margin-left: auto;"><span class="item-amount ${itemClass}" style="font-weight: 600; margin-right: 6px; white-space: nowrap;">${sign}฿${formatMoney(t.amount)}</span><button class="dup-btn" onclick="duplicateTransaction('${id}')" title="ทำซ้ำเป็นของวันนี้">ซ้ำ</button><button class="edit-btn" onclick="openEditModal('${id}')">แก้ไข</button><button class="delete-btn" onclick="removeTransaction('${id}')">ลบ</button></div>`;
+        };
+
+        // ---- [NEW] ค้นหาทุกเดือน ----
+        const searchInputEl = document.getElementById('search-input');
+        const renderSearchResults = (query) => {
+            const listEl = document.getElementById('list');
+            const q = query.toLowerCase();
+            const matches = allTransactions.filter(t =>
+                String(t.description ?? '').toLowerCase().includes(q) || formatMoney(t.amount).replace(/,/g, '').includes(q.replace(/,/g, ''))
+            ).sort(byDateDesc);
+            const income = matches.filter(t => t.type === 'รายรับ').reduce((s, t) => s + t.amount, 0);
+            const expense = matches.filter(t => t.type !== 'รายรับ').reduce((s, t) => s + t.amount, 0);
+            const LIMIT = 200;
+            let html = `<div class="search-summary"><span>พบ ${matches.length} รายการ</span><span>${income ? `<span style="color:#80FFAF">+${formatMoney(income)}</span> ` : ''}${expense ? `<span style="color:#FF8A8A">-${formatMoney(expense)}</span>` : ''}</span></div>`;
+            if (matches.length === 0) {
+                html += '<p style="text-align: center; padding: 20px 0; background:#fff; color:#000; border: 2px solid #000; border-top: none;">ไม่พบรายการที่ตรงกับคำค้น</p>';
+            } else {
+                html += '<ul class="sub-list">' + matches.slice(0, LIMIT).map(t => `<li class="transaction-item">${transactionItemHTML(t)}</li>`).join('') + '</ul>';
+                if (matches.length > LIMIT) html += `<p style="text-align:center; padding: 10px; background:#fff; color:#555; border: 2px solid #000; border-top: none;">แสดง ${LIMIT} รายการล่าสุด พิมพ์คำค้นให้ละเอียดขึ้นเพื่อดูที่เหลือ</p>`;
+            }
+            listEl.innerHTML = html;
+        };
+
+        // ---- [NEW] จำว่ากลุ่มไหนเปิดอยู่ ----
+        const openGroups = new Set(store.get('openGroups', []));
+
         const renderTransactionList = (transactions) => {
             const listEl = document.getElementById('list');
             listEl.innerHTML = '';
@@ -549,20 +796,21 @@
                 const groupContainer = document.createElement('div');
                 const header = document.createElement('div');
                 header.className = 'list-group-header';
-                header.onclick = () => { subList.classList.toggle('hidden'); };
+                header.onclick = () => {
+                    const nowHidden = subList.classList.toggle('hidden');
+                    if (nowHidden) openGroups.delete(type); else openGroups.add(type);
+                    store.set('openGroups', [...openGroups]);
+                };
                 const groupTotal = groupedByType[type].reduce((sum, t) => sum + t.amount, 0);
                 const totalClass = type === 'รายรับ' ? 'positive' : 'negative';
                 const totalSign = type === 'รายรับ' ? '+' : '-';
                 header.innerHTML = `<span>${esc(type)}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
                 const subList = document.createElement('ul');
-                subList.className = 'sub-list hidden';
+                subList.className = openGroups.has(type) ? 'sub-list' : 'sub-list hidden';
                 groupedByType[type].forEach(t => {
                     const item = document.createElement('li');
                     item.className = 'transaction-item';
-                    const sign = t.type === 'รายรับ' ? '+' : '-';
-                    const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
-                    const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
-                    item.innerHTML = `<div class="item-details" style="display:flex; flex-direction: column; gap: 4px;"><span class="item-name" style="font-weight: 500;">${esc(t.description)}</span><span class="item-type" style="font-size: 0.85rem; color: #666;">${formattedDate}</span></div><div class="item-actions" style="display:flex; align-items:center; gap: 8px;"><span class="item-amount ${itemClass}" style="font-weight: 600; margin-right: 10px;">${sign}฿${formatMoney(t.amount)}</span><button class="edit-btn" onclick="openEditModal('${esc(t.id)}')" style="background:#f59e0b; padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">แก้ไข</button><button class="delete-btn" onclick="removeTransaction('${esc(t.id)}')" style="background:var(--danger-color); padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">ลบ</button></div>`;
+                    item.innerHTML = transactionItemHTML(t);
                     subList.appendChild(item);
                 });
                 groupContainer.appendChild(header);
@@ -696,7 +944,7 @@
             const exportYear = parseInt(exportYearFilterEl.value, 10);
             const filtered = allTransactions.filter(t => getTransactionYear(t.transaction_date) === exportYear);
             if (filtered.length === 0) {
-                alert(`ไม่มีข้อมูลสำหรับ Export ในปี ${exportYear + 543}`);
+                toast(`ไม่มีข้อมูลสำหรับ Export ในปี ${exportYear + 543}`, 'error');
                 return;
             }
             const dataToExport = filtered.map(({ id, user_id, created_at, ...rest }) => ({ ...rest, transaction_date: rest.transaction_date }));
@@ -705,7 +953,7 @@
             XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
             XLSX.writeFile(wb, `transactions_${exportYear + 543}.xlsx`);
         };
-        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates: false }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet, { raw: true }); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } alert(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ!`); await fetchAllTransactions(); } else { alert('ไม่พบข้อมูลที่ถูกต้องในไฟล์'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); alert('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
+        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates: false }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet, { raw: true }); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } toast(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ ✓`, 'success', { duration: 4000 }); await fetchAllTransactions(); } else { toast('ไม่พบข้อมูลที่ถูกต้องในไฟล์', 'error'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); toast('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message, 'error'); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
 
         // ---- APP INITIALIZATION ----
         // [FIX] กันไม่ให้ initializeApp ทำงานซ้ำ (Supabase อาจส่ง SIGNED_IN ซ้ำตอนสลับแท็บ ทำให้ตัวกรองเด้งกลับเดือนปัจจุบัน)
@@ -756,6 +1004,74 @@
         document.getElementById('export-data-btn').addEventListener('click', exportData);
         document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
         document.getElementById('import-file').addEventListener('change', importFromXLSX);
+
+        // ---- [NEW] ปุ่ม ◀ ▶ เปลี่ยนเดือน ----
+        const prevMonthBtn = document.getElementById('prev-month-btn');
+        const nextMonthBtn = document.getElementById('next-month-btn');
+        const hasYearOption = (y) => [...yearFilterEl.options].some(o => Number(o.value) === y);
+        const shiftedMonth = (delta) => {
+            let y = parseInt(yearFilterEl.value, 10);
+            let m = parseInt(monthFilterEl.value, 10) + delta;
+            if (m < 1) { m = 12; y -= 1; }
+            if (m > 12) { m = 1; y += 1; }
+            return { y, m };
+        };
+        const shiftMonth = (delta) => {
+            const { y, m } = shiftedMonth(delta);
+            if (!hasYearOption(y)) return;
+            yearFilterEl.value = y;
+            exportYearFilterEl.value = y;
+            monthFilterEl.value = m;
+            renderUI();
+        };
+        const updateMonthNavButtons = () => {
+            prevMonthBtn.disabled = !hasYearOption(shiftedMonth(-1).y);
+            nextMonthBtn.disabled = !hasYearOption(shiftedMonth(1).y);
+        };
+        prevMonthBtn.addEventListener('click', () => shiftMonth(-1));
+        nextMonthBtn.addEventListener('click', () => shiftMonth(1));
+
+        // ---- [NEW] ค้นหา ----
+        const searchClearBtn = document.getElementById('search-clear');
+        let searchTimer;
+        searchInputEl.addEventListener('input', () => {
+            searchClearBtn.classList.toggle('hidden', !searchInputEl.value);
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(renderUI, 150);
+        });
+        searchClearBtn.addEventListener('click', () => {
+            searchInputEl.value = '';
+            searchClearBtn.classList.add('hidden');
+            renderUI();
+            searchInputEl.focus();
+        });
+
+        // ---- [NEW] Modal เพิ่มรายการ + เติมให้เอง ----
+        document.getElementById('add-fab').addEventListener('click', openAddModal);
+        const descriptionEl = document.getElementById('description');
+        descriptionEl.addEventListener('input', applySuggestion);
+        descriptionEl.addEventListener('change', applySuggestion);
+        document.getElementById('amount').addEventListener('input', () => { amountAutoFilled = false; });
+
+        // ---- [NEW] ปิด modal ด้วย Esc หรือแตะพื้นหลัง ----
+        [addModalContainer, editModalContainer].forEach(container => {
+            container.addEventListener('click', (ev) => { if (ev.target === container) container.classList.add('hidden'); });
+        });
+        document.addEventListener('keydown', (ev) => {
+            if (ev.key !== 'Escape') return;
+            addModalContainer.classList.add('hidden');
+            editModalContainer.classList.add('hidden');
+        });
+
+        // ---- [NEW] ออกจากระบบแล้วล้างหน้าจอ ----
+        db.auth.onAuthStateChange((event) => {
+            if (event !== 'SIGNED_OUT') return;
+            addModalContainer.classList.add('hidden');
+            editModalContainer.classList.add('hidden');
+            searchInputEl.value = '';
+            searchClearBtn.classList.add('hidden');
+            toastHost.innerHTML = '';
+        });
 
         initializeApp();
     </script>
