@@ -396,27 +396,59 @@
         const handleLogout = async () => { const { error } = await db.auth.signOut(); if (error) console.error("Logout Error:", error); };
         
         // ---- CORE APP LOGIC ----
+        // [FIX] วันที่วันนี้ตามเวลาเครื่อง (valueAsDate ใช้ UTC ทำให้ช่วง 00:00-06:59 กลายเป็นเมื่อวาน)
+        const todayLocal = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+
+        // [FIX] กันข้อความถูกตีความเป็น HTML
+        const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // [FIX] ปิดปุ่ม submit ระหว่างบันทึก กันกดซ้ำแล้วได้รายการซ้ำ
+        const withBusyForm = async (form, fn) => {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) return;
+            const originalText = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; btn.style.opacity = '0.6'; }
+            try { await fn(); }
+            finally { if (btn) { btn.disabled = false; btn.textContent = originalText; btn.style.opacity = ''; } }
+        };
+
+        // [FIX] Supabase ส่งกลับสูงสุด 1,000 แถวต่อครั้ง จึงดึงทีละหน้าจนครบ
         const fetchAllTransactions = async () => {
-            const { data, error } = await db.from('transactions').select('*').order('transaction_date', { ascending: true });
-            if (error) { console.error('Error fetching transactions:', error); return; }
-            allTransactions = data;
+            const PAGE_SIZE = 1000;
+            let rows = [];
+            let from = 0;
+            while (true) {
+                const { data, error } = await db.from('transactions').select('*')
+                    .order('transaction_date', { ascending: true })
+                    .order('id', { ascending: true })
+                    .range(from, from + PAGE_SIZE - 1);
+                if (error) { console.error('Error fetching transactions:', error); alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message); return; }
+                rows = rows.concat(data);
+                if (data.length < PAGE_SIZE) break;
+                from += PAGE_SIZE;
+            }
+            allTransactions = rows.map(t => ({ ...t, amount: Number(t.amount) }));
             renderUI();
         };
 
         const addTransaction = async (e) => {
             e.preventDefault();
-            const amountValue = parseFloat(document.getElementById('amount').value);
-            if (isNaN(amountValue) || amountValue <= 0) {
-                alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
-                return;
-            }
-            const { data: { user } } = await db.auth.getUser();
-            const newTransaction = { user_id: user.id, type: document.getElementById('type').value, description: document.getElementById('description').value, amount: amountValue, transaction_date: transactionDateEl.value };
-            const { error } = await db.from('transactions').insert(newTransaction);
-            if (error) { console.error('Error adding transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
-            await fetchAllTransactions();
-            document.getElementById('transaction-form').reset();
-            transactionDateEl.valueAsDate = new Date();
+            const form = e.currentTarget;
+            await withBusyForm(form, async () => {
+                const amountValue = parseFloat(document.getElementById('amount').value);
+                if (isNaN(amountValue) || amountValue <= 0) {
+                    alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
+                    return;
+                }
+                const { data: { user } } = await db.auth.getUser();
+                if (!user) { alert('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); return; }
+                const newTransaction = { user_id: user.id, type: document.getElementById('type').value, description: document.getElementById('description').value, amount: amountValue, transaction_date: transactionDateEl.value };
+                const { error } = await db.from('transactions').insert(newTransaction);
+                if (error) { console.error('Error adding transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+                await fetchAllTransactions();
+                form.reset();
+                transactionDateEl.value = todayLocal();
+            });
         };
 
         const removeTransaction = async (id) => {
@@ -428,7 +460,7 @@
         
         // ---- EDIT MODAL LOGIC ----
         window.openEditModal = (id) => {
-            const transaction = allTransactions.find(t => t.id === id);
+            const transaction = allTransactions.find(t => String(t.id) === String(id));
             if (!transaction) return;
             document.getElementById('edit-transaction-id').value = transaction.id;
             document.getElementById('edit-type').value = transaction.type;
@@ -442,17 +474,19 @@
 
         const handleUpdateTransaction = async (e) => {
             e.preventDefault();
-            const amountValue = parseFloat(document.getElementById('edit-amount').value);
-            if (isNaN(amountValue) || amountValue <= 0) {
-                alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
-                return;
-            }
-            const id = document.getElementById('edit-transaction-id').value;
-            const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: amountValue, transaction_date: document.getElementById('edit-transaction_date').value };
-            const { error } = await db.from('transactions').update(updatedTransaction).eq('id', id);
-            if (error) { console.error('Error updating transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
-            closeEditModal();
-            await fetchAllTransactions();
+            await withBusyForm(e.currentTarget, async () => {
+                const amountValue = parseFloat(document.getElementById('edit-amount').value);
+                if (isNaN(amountValue) || amountValue <= 0) {
+                    alert('กรุณาป้อนจำนวนเงินที่ถูกต้อง');
+                    return;
+                }
+                const id = document.getElementById('edit-transaction-id').value;
+                const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: amountValue, transaction_date: document.getElementById('edit-transaction_date').value };
+                const { error } = await db.from('transactions').update(updatedTransaction).eq('id', id);
+                if (error) { console.error('Error updating transaction:', error); alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+                closeEditModal();
+                await fetchAllTransactions();
+            });
         };
 
         // ---- UI & FILTERING & VIEW ----
@@ -519,7 +553,7 @@
                 const groupTotal = groupedByType[type].reduce((sum, t) => sum + t.amount, 0);
                 const totalClass = type === 'รายรับ' ? 'positive' : 'negative';
                 const totalSign = type === 'รายรับ' ? '+' : '-';
-                header.innerHTML = `<span>${type}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
+                header.innerHTML = `<span>${esc(type)}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
                 const subList = document.createElement('ul');
                 subList.className = 'sub-list hidden';
                 groupedByType[type].forEach(t => {
@@ -528,7 +562,7 @@
                     const sign = t.type === 'รายรับ' ? '+' : '-';
                     const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
                     const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
-                    item.innerHTML = `<div class="item-details" style="display:flex; flex-direction: column; gap: 4px;"><span class="item-name" style="font-weight: 500;">${t.description}</span><span class="item-type" style="font-size: 0.85rem; color: #666;">${formattedDate}</span></div><div class="item-actions" style="display:flex; align-items:center; gap: 8px;"><span class="item-amount ${itemClass}" style="font-weight: 600; margin-right: 10px;">${sign}฿${formatMoney(t.amount)}</span><button class="edit-btn" onclick="openEditModal(${t.id})" style="background:#f59e0b; padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">แก้ไข</button><button class="delete-btn" onclick="removeTransaction(${t.id})" style="background:var(--danger-color); padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">ลบ</button></div>`;
+                    item.innerHTML = `<div class="item-details" style="display:flex; flex-direction: column; gap: 4px;"><span class="item-name" style="font-weight: 500;">${esc(t.description)}</span><span class="item-type" style="font-size: 0.85rem; color: #666;">${formattedDate}</span></div><div class="item-actions" style="display:flex; align-items:center; gap: 8px;"><span class="item-amount ${itemClass}" style="font-weight: 600; margin-right: 10px;">${sign}฿${formatMoney(t.amount)}</span><button class="edit-btn" onclick="openEditModal('${esc(t.id)}')" style="background:#f59e0b; padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">แก้ไข</button><button class="delete-btn" onclick="removeTransaction('${esc(t.id)}')" style="background:var(--danger-color); padding:6px 10px; font-size: 0.8rem; border-radius: 8px; border:none; color:white;">ลบ</button></div>`;
                     subList.appendChild(item);
                 });
                 groupContainer.appendChild(header);
@@ -674,8 +708,39 @@
         const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates: false }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet, { raw: true }); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } alert(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ!`); await fetchAllTransactions(); } else { alert('ไม่พบข้อมูลที่ถูกต้องในไฟล์'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); alert('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
 
         // ---- APP INITIALIZATION ----
-        const initializeApp = async () => { const { data: { session } } = await db.auth.getSession(); if (session) { authContainer.classList.add('hidden'); appContainer.classList.remove('hidden'); userEmailDisplay.textContent = session.user.email; transactionDateEl.valueAsDate = new Date(); populateDateFilters(); await fetchAllTransactions(); } else { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); } };
-        db.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_IN') { initializeApp(); } else if (event === 'SIGNED_OUT') { authContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); allTransactions = []; userEmailDisplay.textContent = ''; document.getElementById('login-form').reset(); } });
+        // [FIX] กันไม่ให้ initializeApp ทำงานซ้ำ (Supabase อาจส่ง SIGNED_IN ซ้ำตอนสลับแท็บ ทำให้ตัวกรองเด้งกลับเดือนปัจจุบัน)
+        let appReady = false;
+        const initializeApp = async () => {
+            if (appReady) return;
+            const { data: { session } } = await db.auth.getSession();
+            if (appReady) return;
+            if (session) {
+                appReady = true;
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                userEmailDisplay.textContent = session.user.email;
+                transactionDateEl.value = todayLocal();
+                populateDateFilters();
+                await fetchAllTransactions();
+            } else {
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+            }
+        };
+        db.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                // เรียกผ่าน setTimeout ตามคำแนะนำของ Supabase เพื่อไม่ให้ await ภายใน callback ค้าง
+                setTimeout(initializeApp, 0);
+            } else if (event === 'SIGNED_OUT') {
+                appReady = false;
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                allTransactions = [];
+                userEmailDisplay.textContent = '';
+                document.getElementById('list').innerHTML = '';
+                document.getElementById('login-form').reset();
+            }
+        });
 
         // Event Listeners
         document.getElementById('login-form').addEventListener('submit', handleLogin);
