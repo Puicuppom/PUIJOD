@@ -388,6 +388,33 @@
         .item-tag.credit { color: #7c3aed; }
         .item-tag.income { color: #15803d; }
 
+        /* สรุปรายปี (กระชับ) */
+        .summary-wrap { background: #fff; color: #000; border: 2px solid #000; overflow-x: auto; }
+        #summary-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+        #summary-table th, #summary-table td { padding: 10px 8px; text-align: right; white-space: nowrap; }
+        #summary-table th { background: #f0f0f0; text-align: center; font-weight: 600; }
+        #summary-table td.m { text-align: left; font-weight: 600; }
+        #summary-table tbody tr { border-bottom: 1px solid #ddd; cursor: pointer; }
+        #summary-table tbody tr.current { background: #fff4c2; }
+        #summary-table tbody tr:active { background: #ffe58a; }
+        #summary-table td.zero { color: #aaa; text-align: center; }
+        #summary-table tfoot { font-weight: 700; background: #f0f0f0; }
+        .summary-note { font-size: 0.8rem; text-align: center; margin-top: 8px; opacity: 0.9; }
+        @media (max-width: 600px) {
+            #summary-table { font-size: 0.8rem; }
+            #summary-table th, #summary-table td { padding: 9px 4px; }
+            #summary-table td.m { padding-left: 8px; }
+            #summary-table td:last-child, #summary-table th:last-child { padding-right: 8px; }
+        }
+        @media (max-width: 360px) { #summary-table { font-size: 0.72rem; } }
+
+        /* ปัดเปลี่ยนเดือน / สลับแท็บ */
+        .swipe-month, #transaction-view, #summary-view, .view-toggle, .summary-wrap { touch-action: pan-y; }
+        .swipe-anim-left { animation: swipe-left 0.18s ease-out; }
+        .swipe-anim-right { animation: swipe-right 0.18s ease-out; }
+        @keyframes swipe-left { from { transform: translateX(24px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+        @keyframes swipe-right { from { transform: translateX(-24px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+
         /* คัดลอกทั้งเดือน */
         .copy-month-btn { margin-bottom: 15px; background: var(--mario-dark-brown); font-size: 0.95rem; padding: 10px; }
         .copy-from { font-weight: 500; margin-bottom: 12px; }
@@ -430,7 +457,7 @@
             </header>
 
             <!-- === DATE FILTER MOVED HERE === -->
-            <div class="filter-section section month-nav">
+            <div class="filter-section section month-nav swipe-month">
                 <button type="button" class="nav-btn" id="prev-month-btn" aria-label="เดือนก่อนหน้า">◀</button>
                 <div class="form-group"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
                 <div class="form-group"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
@@ -438,7 +465,7 @@
             </div>
             
             <!-- MARIO DASHBOARD -->
-            <div class="dashboard">
+            <div class="dashboard swipe-month">
                 <div class="card"><h3>คงเหลือ (สะสม)</h3><p class="amount" id="balance">฿0.00</p></div>
                 <div class="card"><h3>รายรับ <span class="month-label"></span></h3><p class="amount" id="total-income">฿0.00</p></div>
                 <div class="card"><h3>รายจ่าย <span class="month-label"></span></h3><p class="amount" id="total-expense">฿0.00</p></div>
@@ -468,9 +495,10 @@
             <div id="summary-view" class="hidden">
                 <div class="section">
                     <h2 class="section-title">สรุปรายปี <span id="summary-year-title"></span></h2>
-                    <div style="overflow-x:auto; background: #fff; color: #000; padding: 10px; border: 2px solid #000;">
-                        <table id="summary-table" style="width: 100%; border-collapse: collapse;"></table>
+                    <div class="summary-wrap">
+                        <table id="summary-table"></table>
                     </div>
+                    <p class="summary-note" id="summary-note"></p>
                 </div>
             </div>
 
@@ -1098,39 +1126,32 @@
             });
         };
 
+        // [NEW] สรุปรายปีแบบกระชับ: จอแคบตัดทศนิยม + ฟอนต์เล็กลง ไม่ต้องเลื่อนข้าง, แตะเดือนเพื่อดูรายการ
         const renderSummary = (yearlyTransactions, year) => {
             document.getElementById('summary-year-title').innerText = `พ.ศ. ${year + 543}`;
-            const startDateOfYear = new Date(year, 0, 1);
-            let runningBalance = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); return transDate < startDateOfYear; }).reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
-            const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            let summaryData = Array(12).fill(0).map((_, i) => ({ month: thaiMonths[i], income: 0, expense: 0, credit: 0 }));
-            yearlyTransactions.forEach(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); const monthIndex = date.getMonth(); if (t.type === 'รายรับ') summaryData[monthIndex].income += t.amount; else if (t.type === 'รายจ่าย') summaryData[monthIndex].expense += t.amount; else if (t.type === 'รายจ่าย (บัตรเครดิต)') summaryData[monthIndex].credit += t.amount; });
-            const tableEl = document.getElementById('summary-table');
-            let tableHTML = `<thead><tr style="background-color: #f0f0f0;"><th style="padding: 12px 8px; text-align: center;">เดือน</th><th style="padding: 12px 8px; text-align: center;">รายรับ</th><th style="padding: 12px 8px; text-align: center;">รายจ่าย</th><th style="padding: 12px 8px; text-align: center;">บัตรเครดิต</th><th style="padding: 12px 8px; text-align: center;">คงเหลือสะสม</th></tr></thead><tbody>`;
-            let total = { income: 0, expense: 0, credit: 0 };
-            summaryData.forEach(data => { 
-                runningBalance += data.income - (data.expense + data.credit); 
-                total.income += data.income; 
-                total.expense += data.expense; 
-                total.credit += data.credit; 
-                tableHTML += `<tr style="border-bottom: 1px solid #ddd;">
-                                <td style="text-align: left; padding: 12px 8px; font-weight: 500;">${data.month}</td>
-                                <td class="positive" style="text-align: right; padding: 12px 8px;">${formatMoney(data.income)}</td>
-                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(data.expense)}</td>
-                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(data.credit)}</td>
-                                <td class="${runningBalance >= 0 ? 'positive' : 'negative'}" style="text-align: right; padding: 12px 8px;">${formatMoney(runningBalance)}</td>
-                              </tr>`; 
+            const narrow = window.innerWidth < 600;
+            const fm = (n) => narrow ? Math.round(n).toLocaleString('en-US') : formatMoney(n);
+            const startIso = `${year}-01-01`;
+            let runningBalance = allTransactions.filter(t => t.transaction_date < startIso).reduce((acc, t) => (t.type === 'รายรับ' ? acc + t.amount : acc - t.amount), 0);
+            const summaryData = thaiShortMonths.map(month => ({ month, income: 0, expense: 0, credit: 0 }));
+            yearlyTransactions.forEach(t => {
+                const i = Number(t.transaction_date.slice(5, 7)) - 1;
+                if (t.type === 'รายรับ') summaryData[i].income += t.amount;
+                else if (t.type === 'รายจ่าย') summaryData[i].expense += t.amount;
+                else if (t.type === 'รายจ่าย (บัตรเครดิต)') summaryData[i].credit += t.amount;
             });
-            tableHTML += `</tbody><tfoot style="font-weight: bold; background-color: #f0f0f0;">
-                            <tr>
-                                <td style="text-align: left; padding: 12px 8px;">รวม</td>
-                                <td class="positive" style="text-align: right; padding: 12px 8px;">${formatMoney(total.income)}</td>
-                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(total.expense)}</td>
-                                <td class="negative" style="text-align: right; padding: 12px 8px;">${formatMoney(total.credit)}</td>
-                                <td class="${runningBalance >= 0 ? 'positive' : 'negative'}" style="text-align: right; padding: 12px 8px;">${formatMoney(runningBalance)}</td>
-                            </tr>
-                          </tfoot>`;
-            tableEl.innerHTML = tableHTML;
+            const selectedMonth = parseInt(monthFilterEl.value, 10);
+            const cell = (v, cls) => `<td class="${v ? cls : 'zero'}">${v ? fm(v) : '–'}</td>`;
+            let html = `<thead><tr><th>เดือน</th><th>รายรับ</th><th>รายจ่าย</th><th>บัตร</th><th>คงเหลือ</th></tr></thead><tbody>`;
+            const total = { income: 0, expense: 0, credit: 0 };
+            summaryData.forEach((d, i) => {
+                runningBalance += d.income - (d.expense + d.credit);
+                total.income += d.income; total.expense += d.expense; total.credit += d.credit;
+                html += `<tr data-month="${i + 1}" class="${i + 1 === selectedMonth ? 'current' : ''}"><td class="m">${d.month}</td>${cell(d.income, 'positive')}${cell(d.expense, 'negative')}${cell(d.credit, 'negative')}<td class="${runningBalance >= 0 ? 'positive' : 'negative'}">${fm(runningBalance)}</td></tr>`;
+            });
+            html += `</tbody><tfoot><tr><td class="m">รวม</td>${cell(total.income, 'positive')}${cell(total.expense, 'negative')}${cell(total.credit, 'negative')}<td class="${runningBalance >= 0 ? 'positive' : 'negative'}">${fm(runningBalance)}</td></tr></tfoot>`;
+            document.getElementById('summary-table').innerHTML = html;
+            document.getElementById('summary-note').textContent = narrow ? 'ปัดเศษเป็นบาท · แตะเดือนเพื่อดูรายการ' : 'แตะเดือนเพื่อดูรายการ';
         };
 
         const START_YEAR = 2024;
@@ -1561,6 +1582,53 @@
         copyModalContainer.addEventListener('click', (ev) => { if (ev.target === copyModalContainer) closeCopyModal(); });
         document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeCopyModal(); });
         db.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') closeCopyModal(); });
+
+        // ---- [NEW] ปัดซ้าย/ขวา: เปลี่ยนเดือน (แถบเดือน/การ์ด) และสลับแท็บ (เนื้อหา) ----
+        const animateSwipe = (el, dir) => { if (!el) return; el.classList.remove('swipe-anim-left', 'swipe-anim-right'); void el.offsetWidth; el.classList.add(dir < 0 ? 'swipe-anim-left' : 'swipe-anim-right'); };
+        const attachSwipe = (el, onSwipe) => {
+            let st = null;
+            el.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                if (e.target.closest('.item-front, .item-actions-behind, input, select, textarea, button, .search-box')) return;
+                st = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId };
+            });
+            const end = (e) => {
+                if (!st || e.pointerId !== st.id) return;
+                const dx = e.clientX - st.x, dy = e.clientY - st.y, dt = Date.now() - st.t;
+                st = null;
+                if (e.type !== 'pointerup' || dt > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+                onSwipe(dx < 0 ? -1 : 1); // -1 = ปัดไปซ้าย
+            };
+            el.addEventListener('pointerup', end);
+            el.addEventListener('pointercancel', end);
+        };
+        document.querySelectorAll('.swipe-month').forEach(el => attachSwipe(el, (dir) => {
+            const delta = dir < 0 ? 1 : -1; // ปัดซ้าย = เดือนถัดไป
+            if (!hasYearOption(shiftedMonth(delta).y)) return;
+            shiftMonth(delta);
+            animateSwipe(document.querySelector('.dashboard'), dir);
+        }));
+        [transactionView, summaryView, document.querySelector('.view-toggle')].forEach(el => attachSwipe(el, (dir) => {
+            const next = dir < 0 ? 'summary' : 'transactions'; // ปัดซ้าย = ไปหน้าสรุป
+            if (next === currentView) return;
+            closeSwipe();
+            setView(next);
+            animateSwipe(next === 'summary' ? summaryView : transactionView, dir);
+        }));
+        // แตะแถวเดือนในหน้าสรุป → ไปดูรายการของเดือนนั้น
+        document.getElementById('summary-table').addEventListener('click', (e) => {
+            const tr = e.target.closest('tr[data-month]');
+            if (!tr) return;
+            monthFilterEl.value = tr.dataset.month;
+            setView('transactions');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        // เคล็ดลับครั้งแรก
+        setTimeout(() => {
+            if (store.get('swipeTipShown', false) || appContainer.classList.contains('hidden')) return;
+            store.set('swipeTipShown', true);
+            toast('เคล็ดลับ: ปัดซ้าย/ขวาที่แถบเดือน = เปลี่ยนเดือน · ปัดที่รายการ/สรุป = สลับแท็บ', 'info', { duration: 7000 });
+        }, 1500);
 
         initializeApp();
     </script>
