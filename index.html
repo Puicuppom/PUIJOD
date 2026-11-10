@@ -308,20 +308,24 @@
             display: flex; justify-content: space-between; align-items: center; gap: 10px;
             padding: 14px 12px; cursor: pointer;
             touch-action: pan-y; user-select: none; -webkit-user-select: none;
-            transition: transform 0.2s ease-out;
+            width: 100%;
+            transition: width 0.2s ease-out;
         }
         .item-front.dragging { transition: none; }
+        /* ตอนเปิดแถบปุ่ม: ซ่อนยอดเงินชั่วคราว ให้ชื่อยังอ่านได้ */
+        .item-front.open .item-amount, .item-front.dragging .item-amount { display: none; }
+        .item-front.open .item-name, .item-front.dragging .item-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .item-front.open { box-shadow: 3px 0 0 #000; }
         .item-details { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
         .item-name { font-weight: 500; overflow-wrap: anywhere; }
         .item-date { font-size: 0.85rem; color: #555; }
         .item-amount { font-weight: 600; white-space: nowrap; }
         .item-actions-behind {
-            position: absolute; top: 0; right: 0; bottom: 0; width: 216px; display: flex;
+            position: absolute; top: 0; right: 0; bottom: 0; width: 180px; display: flex;
         }
         .item-actions-behind button {
             flex: 1; width: auto; height: 100%; padding: 0; border: none; border-radius: 0;
-            border-left: 2px solid #000; box-shadow: none; color: #fff; font-size: 0.95rem;
+            border-left: 2px solid #000; box-shadow: none; color: #fff; font-size: 0.88rem;
         }
         .item-actions-behind button:active { transform: none; filter: brightness(0.85); }
         .item-actions-behind .dup-btn { background: #2563eb; }
@@ -388,8 +392,9 @@
         .copy-month-btn { margin-bottom: 15px; background: var(--mario-dark-brown); font-size: 0.95rem; padding: 10px; }
         .copy-from { font-weight: 500; margin-bottom: 12px; }
         .copy-target { margin-bottom: 12px; }
-        .copy-quick { display: flex; gap: 8px; margin-bottom: 10px; }
-        .copy-quick button { width: auto; flex: 1; padding: 7px 6px; font-size: 0.85rem; background: var(--mario-dark-brown); box-shadow: 2px 2px 0 #000; }
+        .copy-list .copy-group { position: sticky; top: 0; z-index: 1; background: var(--mario-dark-brown); border-bottom: 2px solid #000; }
+        .copy-list .copy-group label { color: #fff; font-weight: 600; }
+        .copy-list .grp-count { font-size: 0.85rem; font-weight: 500; opacity: 0.9; }
         .copy-list { list-style: none; background: #fff; color: #000; border: 2px solid #000; max-height: 42vh; overflow-y: auto; }
         .copy-list li { border-bottom: 1px dashed #999; }
         .copy-list li:last-child { border-bottom: none; }
@@ -450,7 +455,7 @@
                 <!-- Date filter was removed from here -->
                 <div class="section">
                     <h2 class="section-title">ประวัติรายการ</h2>
-                    <p class="swipe-hint">ปัดซ้ายหรือแตะรายการ เพื่อ ซ้ำ / แก้ไข / ลบ</p>
+                    <p class="swipe-hint">ปัดซ้ายหรือแตะรายการ เพื่อ คัดลอก / แก้ไข / ลบ</p>
                     <div class="search-box">
                         <input type="search" id="search-input" placeholder="🔍 ค้นหาทุกเดือน เช่น กาแฟ, Grab" autocomplete="off" enterkeyhint="search">
                         <button type="button" class="clear-btn hidden" id="search-clear" aria-label="ล้างคำค้น">✕</button>
@@ -525,16 +530,11 @@
     <!-- [NEW] COPY MONTH MODAL -->
     <div id="copy-modal-container" class="modal-container hidden">
         <div class="modal-content">
-            <h2 class="section-title">คัดลอกรายการ</h2>
+            <h2 class="section-title">คัดลอกไปเดือนอื่น</h2>
             <p class="copy-from" id="copy-from-label"></p>
             <div class="month-nav copy-target">
                 <div class="form-group"><label for="copy-year">ไปปี</label><select id="copy-year"></select></div>
                 <div class="form-group"><label for="copy-month">ไปเดือน</label><select id="copy-month"></select></div>
-            </div>
-            <div class="copy-quick">
-                <button type="button" data-pick="all">ทั้งหมด</button>
-                <button type="button" data-pick="expense">เฉพาะรายจ่าย</button>
-                <button type="button" data-pick="none">ไม่เลือก</button>
             </div>
             <ul class="copy-list" id="copy-list"></ul>
             <div class="modal-actions" style="display:flex; gap: 15px; margin-top: 20px;">
@@ -730,7 +730,7 @@
                 document.getElementById('description').value = prefill.description;
                 document.getElementById('amount').value = prefill.amount;
                 setTypeValue('type', prefill.type);
-                document.getElementById('add-modal-title').textContent = 'ทำซ้ำรายการ';
+                document.getElementById('add-modal-title').textContent = 'คัดลอกรายการ';
                 document.getElementById('add-submit-btn').textContent = 'บันทึก';
             } else {
                 setTypeValue('type', store.get('lastType', 'รายจ่าย'));
@@ -960,7 +960,7 @@
             const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
             const id = esc(t.id);
             return `<div class="item-actions-behind">`
-                + `<button type="button" class="dup-btn" tabindex="-1" onclick="duplicateTransaction('${id}')">ซ้ำ</button>`
+                + `<button type="button" class="dup-btn" tabindex="-1" onclick="duplicateTransaction('${id}')">คัดลอก</button>`
                 + `<button type="button" class="edit-btn" tabindex="-1" onclick="openEditModal('${id}')">แก้ไข</button>`
                 + `<button type="button" class="delete-btn" tabindex="-1" onclick="removeTransaction('${id}')">ลบ</button>`
                 + `</div>`
@@ -969,7 +969,7 @@
         };
 
         // ---- [NEW] ปัดซ้ายเพื่อโชว์เครื่องมือ (แตะเพื่อเปิด/ปิดก็ได้) ----
-        const SWIPE_WIDTH = 216;
+        const SWIPE_WIDTH = 180;
         let openFront = null;
         let swipe = null;
         const setActionsFocusable = (front, on) => {
@@ -978,14 +978,14 @@
         };
         const openSwipe = (front) => {
             if (openFront && openFront !== front) closeSwipe();
-            front.style.transform = `translateX(-${SWIPE_WIDTH}px)`;
+            front.style.width = `calc(100% - ${SWIPE_WIDTH}px)`;
             front.classList.add('open');
             setActionsFocusable(front, true);
             openFront = front;
         };
         const closeSwipe = () => {
             if (!openFront) return;
-            openFront.style.transform = '';
+            openFront.style.width = '';
             openFront.classList.remove('open');
             setActionsFocusable(openFront, false);
             openFront = null;
@@ -1009,8 +1009,8 @@
                 try { swipe.front.setPointerCapture(e.pointerId); } catch {}
             }
             if (swipe.dir !== 'h') return;
-            swipe.x = Math.min(0, Math.max(-SWIPE_WIDTH - 40, swipe.base + dx));
-            swipe.front.style.transform = `translateX(${swipe.x}px)`;
+            swipe.x = Math.min(0, Math.max(-SWIPE_WIDTH, swipe.base + dx));
+            swipe.front.style.width = `calc(100% - ${-swipe.x}px)`;
         });
         const endSwipe = (e) => {
             if (!swipe || e.pointerId !== swipe.id) return;
@@ -1019,7 +1019,7 @@
             s.front.classList.remove('dragging');
             if (s.dir === 'h') {
                 if (s.x !== null && s.x < -SWIPE_WIDTH / 3) openSwipe(s.front);
-                else { if (openFront === s.front) openFront = null; s.front.style.transform = ''; s.front.classList.remove('open'); setActionsFocusable(s.front, false); }
+                else { if (openFront === s.front) openFront = null; s.front.style.width = ''; s.front.classList.remove('open'); setActionsFocusable(s.front, false); }
             } else if (s.dir === null && e.type === 'pointerup') {
                 // แตะเฉย ๆ = เปิด/ปิด
                 if (openFront === s.front) closeSwipe(); else openSwipe(s.front);
@@ -1060,6 +1060,9 @@
         // ---- [NEW] จำว่ากลุ่มไหนเปิดอยู่ ----
         const openGroups = new Set(store.get('openGroups', []));
 
+        // [NEW] เรียงตามชื่อ (ภาษาไทย) แล้วตามวันที่ → แต่ละเดือนเรียงเหมือนกัน
+        const thaiCollator = new Intl.Collator('th', { sensitivity: 'base', numeric: true });
+        const byNameThenDate = (a, b) => thaiCollator.compare(String(a.description ?? '').trim(), String(b.description ?? '').trim()) || (a.transaction_date < b.transaction_date ? -1 : a.transaction_date > b.transaction_date ? 1 : 0);
         const renderTransactionList = (transactions) => {
             openFront = null;
             const listEl = document.getElementById('list');
@@ -1083,7 +1086,7 @@
                 header.innerHTML = `<span>${esc(type)}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
                 const subList = document.createElement('ul');
                 subList.className = openGroups.has(type) ? 'sub-list' : 'sub-list hidden';
-                groupedByType[type].forEach(t => {
+                groupedByType[type].sort(byNameThenDate).forEach(t => {
                     const item = document.createElement('li');
                     item.className = 'transaction-item';
                     item.innerHTML = transactionItemHTML(t, { showTag: false });
@@ -1456,7 +1459,15 @@
         const sameItemKey = (t) => `${t.type}|${descKey(t.description)}|${Number(t.amount).toFixed(2)}`;
 
         const updateCopyCount = () => {
-            const n = copyListEl.querySelectorAll('input:checked').length;
+            const n = copyListEl.querySelectorAll('input[data-i]:checked').length;
+            // สถานะช่องติ๊กของแต่ละหมวด + จำนวนที่เลือก
+            copyListEl.querySelectorAll('input.grp').forEach(g => {
+                const items = [...copyListEl.querySelectorAll('input[data-i]')].filter(cb => copySource[Number(cb.dataset.i)].type === g.dataset.type);
+                const on = items.filter(cb => cb.checked).length;
+                g.checked = on > 0 && on === items.length;
+                g.indeterminate = on > 0 && on < items.length;
+                g.closest('label').querySelector('.grp-count').textContent = `${on}/${items.length}`;
+            });
             copyConfirmBtn.textContent = n ? `คัดลอก ${n} รายการ` : 'คัดลอก';
             copyConfirmBtn.disabled = n === 0;
             copyConfirmBtn.style.opacity = n ? '' : '0.5';
@@ -1467,23 +1478,32 @@
             allTransactions.filter(t => t.transaction_date.startsWith(monthPrefix(ty, tm)))
                 .forEach(t => { const k = sameItemKey(t); targetKeys.set(k, (targetKeys.get(k) || 0) + 1); });
             const isSame = ty === copySrc.y && tm === copySrc.m;
-            copyListEl.innerHTML = copySource.map((t, i) => {
+            const itemHTML = (t, i) => {
                 const k = sameItemKey(t);
                 const exists = (targetKeys.get(k) || 0) > 0;
                 if (exists) targetKeys.set(k, targetKeys.get(k) - 1);
                 const day = Number(t.transaction_date.slice(8, 10));
                 const sign = t.type === 'รายรับ' ? '+' : '-';
                 return `<li><label><input type="checkbox" data-i="${i}" data-exists="${exists ? 1 : 0}" ${exists || isSame ? '' : 'checked'}>`
-                    + `<span class="c-desc">${typeTag(t.type)}${esc(t.description)}<span class="c-day">วันที่ ${day}</span>${exists ? '<span class="c-exists">เดือนปลายทางมีรายการนี้แล้ว</span>' : ''}</span>`
+                    + `<span class="c-desc">${esc(t.description)}<span class="c-day">วันที่ ${day}</span>${exists ? '<span class="c-exists">เดือนปลายทางมีรายการนี้แล้ว</span>' : ''}</span>`
                     + `<span class="c-amt ${t.type === 'รายรับ' ? 'positive' : 'negative'}">${sign}${formatMoney(t.amount)}</span></label></li>`;
-            }).join('');
+            };
+            let html = '';
+            VALID_TYPES.forEach(type => {
+                const idx = copySource.map((t, i) => [t, i]).filter(([t]) => t.type === type);
+                if (!idx.length) return;
+                const label = type === 'รายจ่าย (บัตรเครดิต)' ? 'บัตรเครดิต' : type;
+                html += `<li class="copy-group"><label><input type="checkbox" class="grp" data-type="${esc(type)}"><span class="c-desc">${label}</span><span class="grp-count"></span></label></li>`;
+                html += idx.map(([t, i]) => itemHTML(t, i)).join('');
+            });
+            copyListEl.innerHTML = html;
             updateCopyCount();
         };
         window.openCopyModal = () => {
             closeSwipe();
             copySrc = { y: parseInt(yearFilterEl.value, 10), m: parseInt(monthFilterEl.value, 10) };
             copySource = allTransactions.filter(t => t.transaction_date.startsWith(monthPrefix(copySrc.y, copySrc.m)))
-                .sort((a, b) => a.transaction_date < b.transaction_date ? -1 : a.transaction_date > b.transaction_date ? 1 : (Number(a.id) || 0) - (Number(b.id) || 0));
+                .sort(byNameThenDate);
             if (!copySource.length) { toast('เดือนนี้ยังไม่มีรายการให้คัดลอก', 'error'); return; }
             document.getElementById('copy-from-label').textContent = `จาก ${thaiFullMonths[copySrc.m - 1]} ${copySrc.y + 543} (${copySource.length} รายการ) · วันที่เดิม`;
             copyYearEl.innerHTML = yearFilterEl.innerHTML;
@@ -1501,21 +1521,24 @@
         copyYearEl.addEventListener('change', renderCopyList);
         copyMonthEl.addEventListener('change', renderCopyList);
         copyListEl.addEventListener('change', updateCopyCount);
-        document.querySelector('.copy-quick').addEventListener('click', (e) => {
-            const b = e.target.closest('button[data-pick]');
-            if (!b) return;
-            copyListEl.querySelectorAll('input[type=checkbox]').forEach(cb => {
-                const t = copySource[Number(cb.dataset.i)];
-                const fresh = cb.dataset.exists !== '1'; // ข้ามรายการที่เดือนปลายทางมีแล้ว (ติ๊กเองได้)
-                cb.checked = b.dataset.pick === 'all' ? fresh : b.dataset.pick === 'expense' ? fresh && t.type !== 'รายรับ' : false;
-            });
-            updateCopyCount();
+        // ติ๊กหัวหมวด = เลือก/ไม่เลือกทั้งหมวด (ข้ามรายการที่เดือนปลายทางมีแล้ว ถ้ายังมีรายการอื่นให้เลือก)
+        copyListEl.addEventListener('click', (e) => {
+            const g = e.target.closest('input.grp');
+            if (!g) return;
+            const items = [...copyListEl.querySelectorAll('input[data-i]')].filter(cb => copySource[Number(cb.dataset.i)].type === g.dataset.type);
+            const anyOn = items.some(cb => cb.checked);
+            if (anyOn) items.forEach(cb => { cb.checked = false; });
+            else {
+                const fresh = items.filter(cb => cb.dataset.exists !== '1');
+                (fresh.length ? fresh : items).forEach(cb => { cb.checked = true; });
+            }
+            setTimeout(updateCopyCount, 0);
         });
         copyConfirmBtn.addEventListener('click', async () => {
             if (copyConfirmBtn.dataset.busy) return;
             const ty = parseInt(copyYearEl.value, 10), tm = parseInt(copyMonthEl.value, 10);
             if (ty === copySrc.y && tm === copySrc.m) { toast('เลือกเดือนปลายทางที่ไม่ใช่เดือนเดิม', 'error'); return; }
-            const picked = [...copyListEl.querySelectorAll('input:checked')].map(cb => copySource[Number(cb.dataset.i)]);
+            const picked = [...copyListEl.querySelectorAll('input[data-i]:checked')].map(cb => copySource[Number(cb.dataset.i)]);
             if (!picked.length) return;
             const { data: { user } } = await db.auth.getUser();
             if (!user) { toast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error'); return; }
