@@ -1,5 +1,5 @@
 // PUIJOD service worker: เปิดแอปได้แม้เน็ตไม่ดี (ข้อมูลยังต้องใช้เน็ตโหลดจาก Supabase)
-const CACHE = 'puijod-v3';
+const CACHE = 'puijod-v4';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'cdn.sheetjs.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
