@@ -409,7 +409,29 @@
         @media (max-width: 360px) { #summary-table { font-size: 0.72rem; } }
 
         /* ปัดเปลี่ยนเดือน / สลับแท็บ */
-        .swipe-month, #transaction-view, #summary-view, .view-toggle, .summary-wrap { touch-action: pan-y; }
+        .month-nav { align-items: center; }
+        .month-nav .nav-hint {
+            flex: 0 0 34px; width: 34px; padding: 0; margin-top: 22px; background: transparent; border: none; box-shadow: none;
+            color: #fff; display: flex; flex-direction: column; align-items: center; line-height: 1; opacity: 0.85;
+            text-shadow: 2px 2px #000;
+        }
+        .month-nav .nav-hint:active { transform: none; opacity: 1; }
+        .month-nav .nav-hint:disabled { visibility: hidden; }
+        .month-nav .nav-hint .chev { font-size: 2rem; font-weight: 700; animation: chev-nudge 2.4s ease-in-out infinite; }
+        #prev-month-btn .chev { animation-name: chev-nudge-left; }
+        .month-nav .nav-hint .hint-label { font-size: 0.68rem; font-weight: 500; margin-top: 2px; white-space: nowrap; }
+        @keyframes chev-nudge { 0%, 70%, 100% { transform: none; } 80% { transform: translateX(3px); } 90% { transform: translateX(-1px); } }
+        @keyframes chev-nudge-left { 0%, 70%, 100% { transform: none; } 80% { transform: translateX(-3px); } 90% { transform: translateX(1px); } }
+        .swipe-month { cursor: grab; }
+        .swipe-month select, .swipe-month button { cursor: pointer; }
+        body.swiping, body.swiping * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; }
+        .pager-dots { display: flex; justify-content: center; align-items: center; gap: 8px; margin: -16px 0 18px; }
+        .pager-dots span { width: 9px; height: 9px; border: 2px solid #000; background: rgba(255,255,255,0.5); transition: background 0.2s, width 0.2s; }
+        .pager-dots span.active { background: var(--mario-yellow); width: 22px; }
+        .pager-dots small { font-size: 0.72rem; margin-left: 4px; opacity: 0.85; text-shadow: 1px 1px #000; }
+        .follow { will-change: transform; }
+        .spring-back { transition: transform 0.2s ease-out; }
+        .swipe-month, #transaction-view, #summary-view, .view-toggle, .pager-dots, .summary-wrap { touch-action: pan-y; }
         .swipe-anim-left { animation: swipe-left 0.18s ease-out; }
         .swipe-anim-right { animation: swipe-right 0.18s ease-out; }
         @keyframes swipe-left { from { transform: translateX(24px); opacity: 0.4; } to { transform: none; opacity: 1; } }
@@ -458,10 +480,10 @@
 
             <!-- === DATE FILTER MOVED HERE === -->
             <div class="filter-section section month-nav swipe-month">
-                <button type="button" class="nav-btn" id="prev-month-btn" aria-label="เดือนก่อนหน้า">◀</button>
+                <button type="button" class="nav-hint" id="prev-month-btn" aria-label="เดือนก่อนหน้า"><span class="chev">‹</span><span class="hint-label" id="prev-month-label"></span></button>
                 <div class="form-group"><label for="year-filter">ปี</label><select id="year-filter"></select></div>
                 <div class="form-group"><label for="month-filter">เดือน</label><select id="month-filter"></select></div>
-                <button type="button" class="nav-btn" id="next-month-btn" aria-label="เดือนถัดไป">▶</button>
+                <button type="button" class="nav-hint" id="next-month-btn" aria-label="เดือนถัดไป"><span class="chev">›</span><span class="hint-label" id="next-month-label"></span></button>
             </div>
             
             <!-- MARIO DASHBOARD -->
@@ -477,6 +499,7 @@
                 <button class="view-toggle-btn active" onclick="setView('transactions')">ดูรายการ</button>
                 <button class="view-toggle-btn" onclick="setView('summary')">ดูสรุป</button>
             </div>
+            <div class="pager-dots" aria-hidden="true"><span data-v="transactions"></span><span data-v="summary"></span><small>ปัดเพื่อสลับหน้า</small></div>
 
             <div id="transaction-view">
                 <!-- Date filter was removed from here -->
@@ -930,6 +953,7 @@
             document.querySelector(`.view-toggle-btn[onclick="setView('${view}')"]`).classList.add('active');
             transactionView.classList.toggle('hidden', view !== 'transactions');
             summaryView.classList.toggle('hidden', view !== 'summary');
+            document.querySelectorAll('.pager-dots span').forEach(d => d.classList.toggle('active', d.dataset.v === view));
             renderUI();
         };
 
@@ -1416,8 +1440,11 @@
             renderUI();
         };
         const updateMonthNavButtons = () => {
-            prevMonthBtn.disabled = !hasYearOption(shiftedMonth(-1).y);
-            nextMonthBtn.disabled = !hasYearOption(shiftedMonth(1).y);
+            const prev = shiftedMonth(-1), next = shiftedMonth(1);
+            prevMonthBtn.disabled = !hasYearOption(prev.y);
+            nextMonthBtn.disabled = !hasYearOption(next.y);
+            document.getElementById('prev-month-label').textContent = thaiShortMonths[prev.m - 1];
+            document.getElementById('next-month-label').textContent = thaiShortMonths[next.m - 1];
         };
         prevMonthBtn.addEventListener('click', () => shiftMonth(-1));
         nextMonthBtn.addEventListener('click', () => shiftMonth(1));
@@ -1585,36 +1612,80 @@
 
         // ---- [NEW] ปัดซ้าย/ขวา: เปลี่ยนเดือน (แถบเดือน/การ์ด) และสลับแท็บ (เนื้อหา) ----
         const animateSwipe = (el, dir) => { if (!el) return; el.classList.remove('swipe-anim-left', 'swipe-anim-right'); void el.offsetWidth; el.classList.add(dir < 0 ? 'swipe-anim-left' : 'swipe-anim-right'); };
-        const attachSwipe = (el, onSwipe) => {
+        // [v2] ใช้ได้ทั้งนิ้วและเมาส์, เริ่มบนปุ่ม/dropdown ก็ได้, เนื้อหาเลื่อนตามนิ้ว
+        let suppressClickUntil = 0;
+        document.addEventListener('click', (e) => { if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopPropagation(); suppressClickUntil = 0; } }, true);
+        const SWIPE_MIN = 45;
+        const attachSwipe = (el, { onSwipe, followEl }) => {
             let st = null;
+            const target = () => (typeof followEl === 'function' ? followEl() : followEl);
+            const setFollow = (dx) => { const t = target(); if (!t) return; t.classList.remove('spring-back'); t.classList.add('follow'); t.style.transform = dx ? `translateX(${dx}px)` : ''; };
+            const release = () => { const t = target(); if (!t) return; t.classList.add('spring-back'); t.style.transform = ''; setTimeout(() => t.classList.remove('spring-back', 'follow'), 220); };
             el.addEventListener('pointerdown', (e) => {
-                if (e.pointerType === 'mouse') return;
-                if (e.target.closest('.item-front, .item-actions-behind, input, select, textarea, button, .search-box')) return;
-                st = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId };
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                if (e.target.closest('.item-front, .item-actions-behind, input, textarea, .search-box')) return;
+                if (e.pointerType === 'mouse' && e.target.closest('select')) return; // dropdown บนคอมเปิดตอนกดเมาส์
+                st = { x: e.clientX, y: e.clientY, id: e.pointerId, dir: null, dx: 0, mouse: e.pointerType === 'mouse' };
+            });
+            el.addEventListener('pointermove', (e) => {
+                if (!st || e.pointerId !== st.id) return;
+                const dx = e.clientX - st.x, dy = e.clientY - st.y;
+                if (st.dir === null) {
+                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                    st.dir = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v';
+                    if (st.dir === 'h') { document.body.classList.add('swiping'); try { el.setPointerCapture(e.pointerId); } catch {} }
+                }
+                if (st.dir !== 'h') return;
+                st.dx = dx;
+                setFollow(Math.sign(dx) * Math.min(Math.abs(dx) * 0.35, 60));
             });
             const end = (e) => {
                 if (!st || e.pointerId !== st.id) return;
-                const dx = e.clientX - st.x, dy = e.clientY - st.y, dt = Date.now() - st.t;
-                st = null;
-                if (e.type !== 'pointerup' || dt > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-                onSwipe(dx < 0 ? -1 : 1); // -1 = ปัดไปซ้าย
+                const s0 = st; st = null;
+                document.body.classList.remove('swiping');
+                if (s0.dir !== 'h') return;
+                if (s0.mouse) suppressClickUntil = Date.now() + 350; // เมาส์: กันปุ่มทำงานหลังลาก (นิ้วไม่ส่ง click อยู่แล้ว)
+                const dx = e.type === 'pointerup' ? e.clientX - s0.x : s0.dx;
+                const t = target(); if (t) { t.style.transform = ''; t.classList.remove('follow'); }
+                if (Math.abs(dx) >= SWIPE_MIN) { if (onSwipe(dx < 0 ? -1 : 1) === false) release(); }
+                else release();
             };
             el.addEventListener('pointerup', end);
             el.addEventListener('pointercancel', end);
+            // trackpad ปัดข้าง (คอม)
+            let acc = 0, lockUntil = 0;
+            el.addEventListener('wheel', (e) => {
+                if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 1.2) return;
+                e.preventDefault();
+                if (Date.now() < lockUntil) return;
+                acc += e.deltaX;
+                if (Math.abs(acc) > 70) { onSwipe(acc > 0 ? -1 : 1); acc = 0; lockUntil = Date.now() + 650; }
+            }, { passive: false });
         };
-        document.querySelectorAll('.swipe-month').forEach(el => attachSwipe(el, (dir) => {
-            const delta = dir < 0 ? 1 : -1; // ปัดซ้าย = เดือนถัดไป
-            if (!hasYearOption(shiftedMonth(delta).y)) return;
+        const goMonth = (dir) => { // dir -1 = ปัดไปซ้าย = เดือนถัดไป
+            const delta = dir < 0 ? 1 : -1;
+            if (!hasYearOption(shiftedMonth(delta).y)) return false;
             shiftMonth(delta);
             animateSwipe(document.querySelector('.dashboard'), dir);
-        }));
-        [transactionView, summaryView, document.querySelector('.view-toggle')].forEach(el => attachSwipe(el, (dir) => {
-            const next = dir < 0 ? 'summary' : 'transactions'; // ปัดซ้าย = ไปหน้าสรุป
-            if (next === currentView) return;
+        };
+        const goTab = (dir) => {
+            const next = dir < 0 ? 'summary' : 'transactions';
+            if (next === currentView) return false;
             closeSwipe();
             setView(next);
             animateSwipe(next === 'summary' ? summaryView : transactionView, dir);
-        }));
+        };
+        document.querySelectorAll('.swipe-month').forEach(el => attachSwipe(el, { onSwipe: goMonth, followEl: document.querySelector('.dashboard') }));
+        [transactionView, summaryView, document.querySelector('.view-toggle'), document.querySelector('.pager-dots')]
+            .forEach(el => attachSwipe(el, { onSwipe: goTab, followEl: () => (currentView === 'summary' ? summaryView : transactionView) }));
+        // คีย์บอร์ด ← → เปลี่ยนเดือน (คอม)
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            if (e.target.closest && e.target.closest('input, select, textarea')) return;
+            if (appContainer.classList.contains('hidden') || document.querySelector('.modal-container:not(.hidden)')) return;
+            goMonth(e.key === 'ArrowRight' ? -1 : 1);
+        });
+        document.querySelectorAll('.pager-dots span').forEach(d => d.classList.toggle('active', d.dataset.v === currentView));
         // แตะแถวเดือนในหน้าสรุป → ไปดูรายการของเดือนนั้น
         document.getElementById('summary-table').addEventListener('click', (e) => {
             const tr = e.target.closest('tr[data-month]');
@@ -1627,7 +1698,7 @@
         setTimeout(() => {
             if (store.get('swipeTipShown', false) || appContainer.classList.contains('hidden')) return;
             store.set('swipeTipShown', true);
-            toast('เคล็ดลับ: ปัดซ้าย/ขวาที่แถบเดือน = เปลี่ยนเดือน · ปัดที่รายการ/สรุป = สลับแท็บ', 'info', { duration: 7000 });
+            toast('เคล็ดลับ: ปัด/ลาก ซ้าย-ขวา ที่แถบเดือน = เปลี่ยนเดือน · ที่รายการ/สรุป = สลับหน้า (คอมกด ← → ได้)', 'info', { duration: 7000 });
         }, 1500);
 
         initializeApp();
