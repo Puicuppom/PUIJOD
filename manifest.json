@@ -2,15 +2,13 @@
   "name": "PUIJOD - Mario Money Tracker",
   "short_name": "PUIJOD",
   "start_url": "index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#5C94FC",
   "theme_color": "#E52521",
   "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/9382/9382189.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

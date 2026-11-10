@@ -10,11 +10,12 @@
     <meta name="theme-color" content="#E52521">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/9382/9382189.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
     <!-- =================================== -->
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Press+Start+2P&display=swap');
@@ -22,8 +23,8 @@
         :root {
             /* << --- VIBRANT COLORS UPDATED --- >> */
             --primary-color: #43B047; /* Mario Green */
-            --danger-color: #ef4444;  /* Vibrant Red */
-            --success-color: #22c55e; /* Vibrant Green */
+            --danger-color: #b91c1c;  /* [FIX] เข้มขึ้น อ่านง่ายบนพื้นเหลือง/ขาว */
+            --success-color: #15803d; /* [FIX] เข้มขึ้น อ่านง่ายบนพื้นเหลือง/ขาว */
             
             --mario-red: #E52521;
             --mario-yellow: #FAC000;
@@ -271,7 +272,9 @@
         /* แถบเลือกเดือน */
         .month-nav { display: flex; gap: 10px; align-items: flex-end; }
         .month-nav .form-group { flex: 1; min-width: 0; margin-bottom: 0; }
-        .month-nav .form-group select { padding: 12px 6px; }
+        .month-nav .form-group select { padding: 12px 4px; font-size: 0.95rem; }
+        .month-nav { gap: 8px; }
+        .month-nav .nav-btn { width: 40px; flex-basis: 40px; }
         .month-nav .nav-btn {
             width: 48px; flex: 0 0 48px; height: 46px; padding: 0;
             background: var(--mario-dark-brown); font-size: 1.1rem;
@@ -352,6 +355,69 @@
             background: var(--mario-red); box-shadow: 2px 2px 0 #000;
         }
         @keyframes toast-in { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+        /* === [NEW v3] === */
+        .modal-content { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+
+        /* ปุ่มประเภทแตะเดียว */
+        .type-seg { display: flex; border: 2px solid #000; box-shadow: 2px 2px 0 #000; }
+        .type-seg button {
+            flex: 1; width: auto; padding: 11px 4px; border: none; border-left: 2px solid #000;
+            box-shadow: none; background: #fff; color: #000; font-size: 0.95rem; font-weight: 500;
+        }
+        .type-seg button:first-child { border-left: none; }
+        .type-seg button:active { transform: none; }
+        .type-seg button.active[data-type="รายรับ"] { background: #15803d; color: #fff; font-weight: 600; }
+        .type-seg button.active[data-type="รายจ่าย"] { background: #b91c1c; color: #fff; font-weight: 600; }
+        .type-seg button.active[data-type="รายจ่าย (บัตรเครดิต)"] { background: #7c3aed; color: #fff; font-weight: 600; }
+
+        /* ชิปรายการบ่อย */
+        .quick-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .quick-chips:empty { display: none; }
+        .quick-chips button {
+            width: auto; padding: 7px 12px; font-size: 0.9rem; font-weight: 500;
+            background: #fff; color: #000; border: 2px solid #000; box-shadow: 2px 2px 0 #000;
+        }
+        .quick-chips button small { color: #555; margin-left: 4px; }
+        .quick-chips button:active { transform: translate(2px, 2px); box-shadow: none; }
+
+        /* ซ้ำทุกเดือน */
+        .recur-box { margin-top: 18px; border: 2px dashed rgba(0,0,0,0.6); padding: 12px; background: rgba(0,0,0,0.12); }
+        .recur-toggle { display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer; margin: 0; }
+        .recur-toggle input { width: 22px; height: 22px; accent-color: var(--mario-red); }
+        .recur-row { display: flex; gap: 12px; margin-top: 12px; }
+        .recur-row .form-group { flex: 1; margin-bottom: 0; }
+        .recur-note { font-size: 0.8rem; margin-top: 8px; opacity: 0.9; }
+        .recur-preview { font-size: 0.9rem; margin-top: 6px; font-weight: 500; background: #fff; color: #000; padding: 8px 10px; border: 2px solid #000; }
+        .recur-preview:empty { display: none; }
+
+        /* รายการแบบรายวัน */
+        .day-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--mario-dark-brown); color: #fff; border: 2px solid #000;
+            padding: 8px 12px; margin-top: 12px; font-weight: 600; font-size: 0.95rem;
+        }
+        .day-header:first-child { margin-top: 0; }
+        .day-header .positive { color: #80FFAF !important; }
+        .day-header .negative { color: #FF8A8A !important; }
+        .item-tag { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 1px 6px; border: 1.5px solid currentColor; margin-right: 6px; vertical-align: 1px; }
+        .item-tag.credit { color: #7c3aed; }
+        .item-tag.income { color: #15803d; }
+
+        /* คัดลอกทั้งเดือน */
+        .copy-month-btn { margin-bottom: 15px; background: var(--mario-dark-brown); font-size: 0.95rem; padding: 10px; }
+        .copy-from { font-weight: 500; margin-bottom: 12px; }
+        .copy-target { margin-bottom: 12px; }
+        .copy-quick { display: flex; gap: 8px; margin-bottom: 10px; }
+        .copy-quick button { width: auto; flex: 1; padding: 7px 6px; font-size: 0.85rem; background: var(--mario-dark-brown); box-shadow: 2px 2px 0 #000; }
+        .copy-list { list-style: none; background: #fff; color: #000; border: 2px solid #000; max-height: 42vh; overflow-y: auto; }
+        .copy-list li { border-bottom: 1px dashed #999; }
+        .copy-list li:last-child { border-bottom: none; }
+        .copy-list label { display: flex; align-items: center; gap: 10px; padding: 10px; margin: 0; cursor: pointer; color: #000; font-weight: 400; }
+        .copy-list input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--mario-red); }
+        .copy-list .c-desc { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+        .copy-list .c-day { color: #555; font-size: 0.8rem; display: block; }
+        .copy-list .c-amt { font-weight: 600; white-space: nowrap; }
+        .copy-list .c-exists { font-size: 0.75rem; color: #b45309; display: block; }
     </style>
 </head>
 <body>
@@ -388,10 +454,10 @@
             <!-- MARIO DASHBOARD -->
             <div class="dashboard">
                 <div class="card"><h3>คงเหลือ (สะสม)</h3><p class="amount" id="balance">฿0.00</p></div>
-                <div class="card"><h3>รายรับ (เดือนนี้)</h3><p class="amount" id="total-income">฿0.00</p></div>
-                <div class="card"><h3>รายจ่าย (เดือนนี้)</h3><p class="amount" id="total-expense">฿0.00</p></div>
+                <div class="card"><h3>รายรับ <span class="month-label"></span></h3><p class="amount" id="total-income">฿0.00</p></div>
+                <div class="card"><h3>รายจ่าย <span class="month-label"></span></h3><p class="amount" id="total-expense">฿0.00</p></div>
                 <!-- === MODIFIED CARD === -->
-                <div class="card"><h3>ผลต่าง (เดือนนี้)</h3><p class="amount" id="monthly-difference">฿0.00</p></div>
+                <div class="card"><h3>ผลต่าง <span class="month-label"></span></h3><p class="amount" id="monthly-difference">฿0.00</p></div>
             </div>
 
             <div class="view-toggle">
@@ -403,11 +469,12 @@
                 <!-- Date filter was removed from here -->
                 <div class="section">
                     <h2 class="section-title">ประวัติรายการ</h2>
-                    <p class="swipe-hint">ปัดรายการไปทางซ้าย (หรือแตะ) เพื่อ ซ้ำ / แก้ไข / ลบ</p>
+                    <p class="swipe-hint">ปัดซ้ายหรือแตะรายการ เพื่อ ซ้ำ / แก้ไข / ลบ</p>
                     <div class="search-box">
                         <input type="search" id="search-input" placeholder="🔍 ค้นหาทุกเดือน เช่น กาแฟ, Grab" autocomplete="off" enterkeyhint="search">
                         <button type="button" class="clear-btn hidden" id="search-clear" aria-label="ล้างคำค้น">✕</button>
                     </div>
+                    <button type="button" class="copy-month-btn" id="copy-month-btn">📋 คัดลอกรายการเดือนนี้ไปเดือนอื่น</button>
                     <div id="list"></div>
                 </div>
             </div>
@@ -444,14 +511,26 @@
         <div class="modal-content">
             <h2 class="section-title" id="add-modal-title">เพิ่มรายการ</h2>
             <form id="transaction-form" autocomplete="off">
+                <div class="quick-chips" id="quick-chips"></div>
                 <div class="form-group"><label for="description">รายละเอียด</label><input type="text" id="description" list="desc-suggestions" required enterkeyhint="next"></div>
                 <div class="form-group"><label for="amount">จำนวนเงิน</label><input type="number" step="0.01" min="0.01" id="amount" inputmode="decimal" required></div>
-                <div class="form-group"><label for="type">ประเภท</label><select id="type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div>
+                <div class="form-group"><label>ประเภท</label><input type="hidden" id="type" value="รายจ่าย"><div class="type-seg" data-for="type"><button type="button" data-type="รายรับ">รายรับ</button><button type="button" data-type="รายจ่าย">รายจ่าย</button><button type="button" data-type="รายจ่าย (บัตรเครดิต)">บัตรเครดิต</button></div></div>
                 <div class="form-group"><label for="transaction_date">วันที่</label><input type="date" id="transaction_date" required>
                     <div class="date-chips">
                         <button type="button" data-days-ago="0">วันนี้</button>
                         <button type="button" data-days-ago="1">เมื่อวาน</button>
                         <button type="button" data-days-ago="2">2 วันก่อน</button>
+                    </div>
+                </div>
+                <div class="recur-box">
+                    <label class="recur-toggle"><input type="checkbox" id="recur-enabled"> ซ้ำทุกเดือน (เช่น ผ่อน, ค่าเน็ต)</label>
+                    <div id="recur-fields" class="hidden">
+                        <div class="recur-row">
+                            <div class="form-group"><label for="recur-months">จำนวนเดือน</label><input type="number" id="recur-months" min="2" max="60" value="3" inputmode="numeric"></div>
+                            <div class="form-group"><label for="recur-day">จ่ายทุกวันที่</label><input type="number" id="recur-day" min="1" max="31" inputmode="numeric"></div>
+                        </div>
+                        <p class="recur-note">เริ่มจากเดือนของ "วันที่" ด้านบน · เดือนที่ไม่มีวันนั้นจะใช้วันสุดท้ายของเดือน</p>
+                        <p class="recur-preview" id="recur-preview"></p>
                     </div>
                 </div>
                 <div class="modal-actions" style="display:flex; gap: 15px; margin-top: 25px;">
@@ -463,6 +542,28 @@
         </div>
     </div>
 
+    <!-- [NEW] COPY MONTH MODAL -->
+    <div id="copy-modal-container" class="modal-container hidden">
+        <div class="modal-content">
+            <h2 class="section-title">คัดลอกรายการ</h2>
+            <p class="copy-from" id="copy-from-label"></p>
+            <div class="month-nav copy-target">
+                <div class="form-group"><label for="copy-year">ไปปี</label><select id="copy-year"></select></div>
+                <div class="form-group"><label for="copy-month">ไปเดือน</label><select id="copy-month"></select></div>
+            </div>
+            <div class="copy-quick">
+                <button type="button" data-pick="all">ทั้งหมด</button>
+                <button type="button" data-pick="expense">เฉพาะรายจ่าย</button>
+                <button type="button" data-pick="none">ไม่เลือก</button>
+            </div>
+            <ul class="copy-list" id="copy-list"></ul>
+            <div class="modal-actions" style="display:flex; gap: 15px; margin-top: 20px;">
+                <button type="button" onclick="closeCopyModal()" style="background-color: #6c757d;">ยกเลิก</button>
+                <button type="button" id="copy-confirm-btn">คัดลอก</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-host" aria-live="polite"></div>
     
     <!-- EDIT TRANSACTION MODAL -->
@@ -471,7 +572,7 @@
             <h2 class="section-title">แก้ไขรายการ</h2>
             <form id="edit-transaction-form">
                 <input type="hidden" id="edit-transaction-id">
-                <div class="form-group"><label for="edit-type">ประเภท</label><select id="edit-type"><option value="รายรับ">รายรับ</option><option value="รายจ่าย">รายจ่าย</option><option value="รายจ่าย (บัตรเครดิต)">รายจ่าย (บัตรเครดิต)</option></select></div>
+                <div class="form-group"><label>ประเภท</label><input type="hidden" id="edit-type" value="รายจ่าย"><div class="type-seg" data-for="edit-type"><button type="button" data-type="รายรับ">รายรับ</button><button type="button" data-type="รายจ่าย">รายจ่าย</button><button type="button" data-type="รายจ่าย (บัตรเครดิต)">บัตรเครดิต</button></div></div>
                 <div class="form-group"><label for="edit-description">รายละเอียด</label><input type="text" id="edit-description" required></div>
                 <div class="form-group"><label for="edit-amount">จำนวนเงิน</label><input type="number" step="0.01" min="0.01" id="edit-amount" inputmode="decimal" required></div>
                 <div class="form-group"><label for="edit-transaction_date">วันที่</label><input type="date" id="edit-transaction_date" required></div>
@@ -583,6 +684,7 @@
                 from += PAGE_SIZE;
             }
             allTransactions = rows.map(t => ({ ...t, amount: Number(t.amount) }));
+            refreshYearOptions();
             rebuildSuggestions();
             renderUI();
         };
@@ -607,6 +709,44 @@
                 opt.value = t.description;
                 datalist.appendChild(opt);
             }
+            // [NEW] รายการบ่อย 6 อันดับ (90 วันล่าสุด; ถ้าน้อยไปใช้ทั้งหมด)
+            const since = daysAgoLocal(90);
+            const countBy = (list) => { const m = new Map(); for (const t of list) { const k = descKey(t.description); if (k) m.set(k, (m.get(k) || 0) + 1); } return m; };
+            let counts = countBy(allTransactions.filter(t => t.transaction_date >= since));
+            if (counts.size < 6) counts = countBy(allTransactions);
+            frequentItems = [...counts.entries()]
+                .sort((a, b) => b[1] - a[1] || (lastByDescription.get(b[0]).transaction_date > lastByDescription.get(a[0]).transaction_date ? 1 : -1))
+                .slice(0, 6)
+                .map(([k]) => lastByDescription.get(k));
+        };
+        let frequentItems = [];
+
+        // ---- [NEW] ปุ่มประเภทแตะเดียว ----
+        const setTypeValue = (inputId, value) => {
+            document.getElementById(inputId).value = value;
+            document.querySelectorAll(`.type-seg[data-for="${inputId}"] button`).forEach(b => b.classList.toggle('active', b.dataset.type === value));
+        };
+        document.querySelectorAll('.type-seg').forEach(seg => {
+            seg.addEventListener('click', (e) => { const b = e.target.closest('button[data-type]'); if (b) setTypeValue(seg.dataset.for, b.dataset.type); });
+        });
+
+        // ---- [NEW] ชิปรายการบ่อย ----
+        const renderQuickChips = (show) => {
+            const box = document.getElementById('quick-chips');
+            box.innerHTML = '';
+            if (!show) return;
+            frequentItems.forEach(t => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.innerHTML = `${esc(t.description)}<small>฿${formatMoney(t.amount).replace(/\.00$/, '')}</small>`;
+                b.addEventListener('click', () => {
+                    document.getElementById('description').value = t.description;
+                    document.getElementById('amount').value = t.amount;
+                    amountAutoFilled = true;
+                    setTypeValue('type', t.type);
+                });
+                box.appendChild(b);
+            });
         };
 
         let amountAutoFilled = false;
@@ -618,7 +758,7 @@
                 amountEl.value = match.amount;
                 amountAutoFilled = true;
             }
-            document.getElementById('type').value = match.type;
+            setTypeValue('type', match.type);
         };
 
         // ---- [NEW] Modal เพิ่มรายการ ----
@@ -633,14 +773,16 @@
             amountAutoFilled = false;
             addIsDuplicate = !!prefill;
             transactionDateEl.value = todayLocal();
+            resetRecur();
+            renderQuickChips(!prefill);
             if (prefill) {
                 document.getElementById('description').value = prefill.description;
                 document.getElementById('amount').value = prefill.amount;
-                document.getElementById('type').value = prefill.type;
+                setTypeValue('type', prefill.type);
                 document.getElementById('add-modal-title').textContent = 'ทำซ้ำรายการ';
                 document.getElementById('add-submit-btn').textContent = 'บันทึก';
             } else {
-                document.getElementById('type').value = store.get('lastType', 'รายจ่าย');
+                setTypeValue('type', store.get('lastType', 'รายจ่าย'));
                 document.getElementById('add-modal-title').textContent = 'เพิ่มรายการ';
                 document.getElementById('add-submit-btn').textContent = 'เพิ่มรายการ';
             }
@@ -649,6 +791,63 @@
             if (!prefill) setTimeout(() => document.getElementById('description').focus(), 50);
         };
         window.closeAddModal = () => { addModalContainer.classList.add('hidden'); };
+
+        // ---- [NEW] ซ้ำทุกเดือน ----
+        const recurEnabledEl = document.getElementById('recur-enabled');
+        const recurFieldsEl = document.getElementById('recur-fields');
+        const recurMonthsEl = document.getElementById('recur-months');
+        const recurDayEl = document.getElementById('recur-day');
+        const recurPreviewEl = document.getElementById('recur-preview');
+        const addSubmitBtn = document.getElementById('add-submit-btn');
+        let recurDayTouched = false;
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const daysInMonth = (y, m) => new Date(y, m, 0).getDate(); // m = 1..12
+        const thaiShortMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const shortThaiDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${thaiShortMonths[m - 1]} ${String(y + 543).slice(-2)}`; };
+        const sameDayIn = (y, m, day) => `${y}-${pad2(m)}-${pad2(Math.min(day, daysInMonth(y, m)))}`;
+        const computeRecurDates = (startIso, months, day) => {
+            const [y0, m0] = startIso.split('-').map(Number);
+            const out = [];
+            for (let i = 0; i < months; i++) {
+                const idx = (m0 - 1) + i;
+                out.push(sameDayIn(y0 + Math.floor(idx / 12), (idx % 12) + 1, day));
+            }
+            return out;
+        };
+        const readRecur = () => {
+            const months = parseInt(recurMonthsEl.value, 10);
+            const day = parseInt(recurDayEl.value, 10);
+            if (!transactionDateEl.value || !(months >= 2 && months <= 60) || !(day >= 1 && day <= 31)) return null;
+            return computeRecurDates(transactionDateEl.value, months, day);
+        };
+        const updateRecurPreview = () => {
+            if (!recurEnabledEl.checked) { recurPreviewEl.textContent = ''; addSubmitBtn.textContent = addIsDuplicate ? 'บันทึก' : 'เพิ่มรายการ'; return; }
+            if (!recurDayTouched && transactionDateEl.value) recurDayEl.value = Number(transactionDateEl.value.slice(8, 10));
+            const dates = readRecur();
+            if (!dates) { recurPreviewEl.textContent = 'ใส่จำนวนเดือน 2–60 และวันที่ 1–31'; addSubmitBtn.textContent = 'บันทึก'; return; }
+            const list = dates.length <= 4 ? dates.map(shortThaiDate).join(', ') : `${dates.slice(0, 3).map(shortThaiDate).join(', ')} … ${shortThaiDate(dates[dates.length - 1])}`;
+            recurPreviewEl.textContent = `สร้าง ${dates.length} รายการ: ${list}`;
+            addSubmitBtn.textContent = `บันทึก ${dates.length} รายการ`;
+        };
+        const resetRecur = () => {
+            recurEnabledEl.checked = false;
+            recurFieldsEl.classList.add('hidden');
+            recurMonthsEl.value = 3;
+            recurDayTouched = false;
+            recurPreviewEl.textContent = '';
+        };
+        recurEnabledEl.addEventListener('change', () => { recurFieldsEl.classList.toggle('hidden', !recurEnabledEl.checked); updateRecurPreview(); });
+        recurMonthsEl.addEventListener('input', updateRecurPreview);
+        recurDayEl.addEventListener('input', () => { recurDayTouched = true; updateRecurPreview(); });
+        transactionDateEl.addEventListener('change', updateRecurPreview);
+
+        // ---- [NEW] ลบหลายรายการ (ใช้กับ "เลิกทำ") ----
+        const undoInsert = async (ids, label) => {
+            const { error } = await db.from('transactions').delete().in('id', ids);
+            if (error) { toast('เลิกทำไม่สำเร็จ: ' + error.message, 'error'); return; }
+            toast(label || 'เลิกทำแล้ว', 'info');
+            await fetchAllTransactions();
+        };
 
         const addTransaction = async (e) => {
             e.preventDefault();
@@ -663,13 +862,21 @@
                 if (!user) { toast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error'); return; }
                 const type = document.getElementById('type').value;
                 const description = document.getElementById('description').value.trim();
-                const newTransaction = { user_id: user.id, type, description, amount: amountValue, transaction_date: transactionDateEl.value };
-                const { error } = await db.from('transactions').insert(newTransaction);
+                if (!description) { toast('กรุณาใส่รายละเอียด', 'error'); return; }
+                let dates = [transactionDateEl.value];
+                if (recurEnabledEl.checked) {
+                    dates = readRecur();
+                    if (!dates) { toast('ใส่จำนวนเดือน 2–60 และวันที่ 1–31', 'error'); return; }
+                }
+                const rows = dates.map(d => ({ user_id: user.id, type, description, amount: amountValue, transaction_date: d }));
+                const { data, error } = await db.from('transactions').insert(rows).select('id');
                 if (error) { console.error('Error adding transaction:', error); toast('เกิดข้อผิดพลาด: ' + error.message, 'error'); return; }
                 if (!addIsDuplicate) store.set('lastType', type);
                 closeAddModal();
                 form.reset();
-                toast(`บันทึก "${description}" แล้ว ✓`, 'success');
+                const ids = (data || []).map(r => r.id);
+                const msg = rows.length > 1 ? `บันทึก "${description}" ${rows.length} เดือนแล้ว ✓` : `บันทึก "${description}" แล้ว ✓`;
+                toast(msg, 'success', ids.length ? { duration: 5000, actionLabel: 'เลิกทำ', onAction: () => undoInsert(ids) } : {});
                 await fetchAllTransactions();
             });
         };
@@ -708,7 +915,7 @@
             const transaction = allTransactions.find(t => String(t.id) === String(id));
             if (!transaction) return;
             document.getElementById('edit-transaction-id').value = transaction.id;
-            document.getElementById('edit-type').value = transaction.type;
+            setTypeValue('edit-type', transaction.type);
             document.getElementById('edit-description').value = transaction.description;
             document.getElementById('edit-amount').value = transaction.amount;
             document.getElementById('edit-transaction_date').value = transaction.transaction_date;
@@ -726,7 +933,9 @@
                     return;
                 }
                 const id = document.getElementById('edit-transaction-id').value;
-                const updatedTransaction = { type: document.getElementById('edit-type').value, description: document.getElementById('edit-description').value, amount: amountValue, transaction_date: document.getElementById('edit-transaction_date').value };
+                const editDescription = document.getElementById('edit-description').value.trim();
+                if (!editDescription) { toast('กรุณาใส่รายละเอียด', 'error'); return; }
+                const updatedTransaction = { type: document.getElementById('edit-type').value, description: editDescription, amount: amountValue, transaction_date: document.getElementById('edit-transaction_date').value };
                 const { error } = await db.from('transactions').update(updatedTransaction).eq('id', id);
                 if (error) { console.error('Error updating transaction:', error); toast('เกิดข้อผิดพลาด: ' + error.message, 'error'); return; }
                 closeEditModal();
@@ -752,6 +961,7 @@
             const monthlyTransactions = allTransactions.filter(t => { const date = new Date(t.transaction_date); date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); return date.getFullYear() === selectedYear && (date.getMonth() + 1) === selectedMonth; });
             const upToCurrentMonthTransactions = allTransactions.filter(t => { const transDate = new Date(t.transaction_date); transDate.setMinutes(transDate.getMinutes() + transDate.getTimezoneOffset()); const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0); return transDate <= lastDayOfMonth; });
             updateDashboard(monthlyTransactions, upToCurrentMonthTransactions);
+            document.querySelectorAll('.month-label').forEach(el => { el.textContent = `${thaiShortMonths[selectedMonth - 1]} ${String(selectedYear + 543).slice(-2)}`; });
             updateMonthNavButtons();
             if (currentView === 'transactions') {
                 const query = searchInputEl.value.trim();
@@ -790,7 +1000,9 @@
         const byDateDesc = (a, b) =>
             a.transaction_date < b.transaction_date ? 1 : a.transaction_date > b.transaction_date ? -1 : (Number(b.id) || 0) - (Number(a.id) || 0);
 
-        const transactionItemHTML = (t) => {
+        const typeTag = (type) => type === 'รายรับ' ? '<span class="item-tag income">รับ</span>' : type === 'รายจ่าย (บัตรเครดิต)' ? '<span class="item-tag credit">บัตร</span>' : '';
+        const transactionItemHTML = (t, opts = {}) => {
+            const showDate = opts.showDate !== false;
             const sign = t.type === 'รายรับ' ? '+' : '-';
             const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
             const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
@@ -800,7 +1012,7 @@
                 + `<button type="button" class="edit-btn" tabindex="-1" onclick="openEditModal('${id}')">แก้ไข</button>`
                 + `<button type="button" class="delete-btn" tabindex="-1" onclick="removeTransaction('${id}')">ลบ</button>`
                 + `</div>`
-                + `<div class="item-front"><div class="item-details"><span class="item-name">${esc(t.description)}</span><span class="item-date">${formattedDate}</span></div>`
+                + `<div class="item-front"><div class="item-details"><span class="item-name">${typeTag(t.type)}${esc(t.description)}</span>${showDate ? `<span class="item-date">${formattedDate}</span>` : ''}</div>`
                 + `<span class="item-amount ${itemClass}">${sign}฿${formatMoney(t.amount)}</span></div>`;
         };
 
@@ -893,42 +1105,29 @@
             listEl.innerHTML = html;
         };
 
-        // ---- [NEW] จำว่ากลุ่มไหนเปิดอยู่ ----
-        const openGroups = new Set(store.get('openGroups', []));
+        // ---- [NEW] รายการแบบรายวัน ----
+        const dayLabel = (iso) => {
+            if (iso === todayLocal()) return 'วันนี้';
+            if (iso === daysAgoLocal(1)) return 'เมื่อวาน';
+            const [y, m, d] = iso.split('-').map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' });
+        };
+        const signedNet = (list) => list.reduce((sum, t) => sum + (t.type === 'รายรับ' ? t.amount : -t.amount), 0);
 
         const renderTransactionList = (transactions) => {
             openFront = null;
             const listEl = document.getElementById('list');
             listEl.innerHTML = '';
-            if (transactions.length === 0) { listEl.innerHTML = '<p style="text-align: center; padding: 20px 0; background:#fff; color:#000;">ไม่พบรายการในเดือนนี้</p>'; return; }
-            const groupedByType = transactions.reduce((groups, t) => { const type = t.type; if (!groups[type]) { groups[type] = []; } groups[type].push(t); return groups; }, {});
-            const groupOrder = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)'];
-            groupOrder.forEach(type => {
-                if (!groupedByType[type]) return; 
-                const groupContainer = document.createElement('div');
-                const header = document.createElement('div');
-                header.className = 'list-group-header';
-                header.onclick = () => {
-                    const nowHidden = subList.classList.toggle('hidden');
-                    if (nowHidden) openGroups.delete(type); else openGroups.add(type);
-                    store.set('openGroups', [...openGroups]);
-                };
-                const groupTotal = groupedByType[type].reduce((sum, t) => sum + t.amount, 0);
-                const totalClass = type === 'รายรับ' ? 'positive' : 'negative';
-                const totalSign = type === 'รายรับ' ? '+' : '-';
-                header.innerHTML = `<span>${esc(type)}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
-                const subList = document.createElement('ul');
-                subList.className = openGroups.has(type) ? 'sub-list' : 'sub-list hidden';
-                groupedByType[type].forEach(t => {
-                    const item = document.createElement('li');
-                    item.className = 'transaction-item';
-                    item.innerHTML = transactionItemHTML(t);
-                    subList.appendChild(item);
-                });
-                groupContainer.appendChild(header);
-                groupContainer.appendChild(subList);
-                listEl.appendChild(groupContainer);
-            });
+            if (transactions.length === 0) { listEl.innerHTML = '<p style="text-align: center; padding: 20px 0; background:#fff; color:#000; border: 2px solid #000;">ยังไม่มีรายการในเดือนนี้ · กด + เพื่อเพิ่ม</p>'; return; }
+            const byDay = new Map();
+            for (const t of transactions) { if (!byDay.has(t.transaction_date)) byDay.set(t.transaction_date, []); byDay.get(t.transaction_date).push(t); }
+            let html = '';
+            for (const [day, items] of byDay) {
+                const net = signedNet(items);
+                html += `<div class="day-header"><span>${esc(dayLabel(day))}</span><span class="${net >= 0 ? 'positive' : 'negative'}">${net >= 0 ? '+' : '-'}${formatMoney(Math.abs(net))}</span></div>`;
+                html += '<ul class="sub-list">' + items.map(t => `<li class="transaction-item">${transactionItemHTML(t, { showDate: false })}</li>`).join('') + '</ul>';
+            }
+            listEl.innerHTML = html;
         };
 
         const renderSummary = (yearlyTransactions, year) => {
@@ -968,17 +1167,28 @@
 
         const START_YEAR = 2024;
 
+        // [FIX] ช่วงปีคำนวณจากข้อมูลจริง (ไม่ล็อก 2024)
+        const yearRange = () => {
+            const currentYear = new Date().getFullYear();
+            let min = Math.min(START_YEAR, currentYear), max = currentYear + 1;
+            for (const t of allTransactions) { const y = getTransactionYear(t.transaction_date); if (y) { if (y < min) min = y; if (y > max) max = y; } }
+            return { min, max };
+        };
+        const refreshYearOptions = () => {
+            [yearFilterEl, exportYearFilterEl].forEach(el => { const keep = parseInt(el.value, 10); populateYearSelect(el, keep); });
+        };
         const populateYearSelect = (selectEl, selectedYear) => {
             const now = new Date();
             const currentYear = now.getFullYear();
+            const { min, max } = yearRange();
             selectEl.innerHTML = '';
-            for (let i = currentYear + 1; i >= START_YEAR; i--) {
+            for (let i = max; i >= min; i--) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i + 543;
                 selectEl.appendChild(option);
             }
-            selectEl.value = selectedYear ?? Math.max(currentYear, START_YEAR);
+            selectEl.value = Number.isFinite(selectedYear) ? selectedYear : currentYear;
         };
 
         const populateDateFilters = () => {
@@ -994,7 +1204,7 @@
             thaiMonths.forEach((month, index) => {
                 const option = document.createElement('option');
                 option.value = index + 1;
-                option.textContent = month;
+                option.textContent = window.innerWidth < 420 ? thaiShortMonths[index] : month; // จอแคบใช้ชื่อย่อ กันตัดคำ
                 monthFilterEl.appendChild(option);
             });
             
@@ -1014,6 +1224,8 @@
             return `${y}-${m}-${d}`;
         };
 
+        // [FIX] ตรวจว่าเป็นวันที่มีจริง (กัน 31/02)
+        const isRealDate = (y, m, d) => { if (!(y >= 1900 && y <= 2200 && m >= 1 && m <= 12 && d >= 1)) return false; return d <= new Date(y, m, 0).getDate(); };
         const parseThaiSlashDate = (value) => {
             const match = String(value).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
             if (!match) return null;
@@ -1025,7 +1237,7 @@
             } else if (year > 2400) {
                 year = year - 543;
             }
-            if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+            if (!isRealDate(year, month, day)) return null;
             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         };
 
@@ -1038,7 +1250,13 @@
                     return excelSerialToDateString(25569 + excelDate.getTime() / 86400000);
                 }
                 if (typeof excelDate === 'string') {
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(excelDate)) return excelDate;
+                    const iso = excelDate.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+                    if (iso) {
+                        let [y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+                        if (y > 2400) y -= 543;
+                        if (isRealDate(y, m, d)) return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        throw new Error('Invalid date');
+                    }
                     const thaiDate = parseThaiSlashDate(excelDate);
                     if (thaiDate) return thaiDate;
                 }
@@ -1051,7 +1269,25 @@
 
         const getTransactionYear = (transactionDate) => parseInt(String(transactionDate).slice(0, 4), 10);
 
-        const exportTemplate = () => { const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([ XLSX_HEADERS ]); const dropdownOptions = '"รายรับ,รายจ่าย,รายจ่าย (บัตรเครดิต)"'; ws['!dataValidation'] = [{ sqref: 'B2:B1000', opts: { type: 'list', allowBlank: true, formula1: dropdownOptions, showDropDown: true, errorStyle: 'warning', error: 'กรุณาเลือกจากรายการ', errorTitle: 'ข้อมูลไม่ถูกต้อง' } }]; XLSX.utils.book_append_sheet(wb, ws, "Transactions"); XLSX.writeFile(wb, "template.xlsx"); };
+        // [FIX] SheetJS รุ่นฟรีทำ dropdown ไม่ได้ → แนบชีต "วิธีกรอก" แทน
+        const exportTemplate = () => {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet([XLSX_HEADERS]);
+            ws['!cols'] = [{ wch: 16 }, { wch: 22 }, { wch: 30 }, { wch: 12 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+            const help = XLSX.utils.aoa_to_sheet([
+                ['คอลัมน์', 'วิธีกรอก', 'ตัวอย่าง'],
+                ['transaction_date', 'วันที่ แบบ 2026-11-25 หรือ 25/11/2569 หรือ 25/11/69', '25/11/2569'],
+                ['type', 'พิมพ์อย่างใดอย่างหนึ่ง: รายรับ / รายจ่าย / รายจ่าย (บัตรเครดิต)  (พิมพ์ "บัตรเครดิต" ก็ได้)', 'รายจ่าย'],
+                ['description', 'รายละเอียด ห้ามว่าง', 'ค่าเน็ต'],
+                ['amount', 'จำนวนเงิน มากกว่า 0 (ใส่ลูกน้ำได้)', '599'],
+                [],
+                ['หมายเหตุ', 'กรอกข้อมูลในชีต Transactions เท่านั้น · แถวที่ซ้ำกับข้อมูลเดิมในแอปจะถูกข้ามให้อัตโนมัติ', ''],
+            ]);
+            help['!cols'] = [{ wch: 16 }, { wch: 70 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, help, 'วิธีกรอก');
+            XLSX.writeFile(wb, 'template.xlsx');
+        };
         const exportData = () => {
             const exportYear = parseInt(exportYearFilterEl.value, 10);
             const filtered = allTransactions.filter(t => getTransactionYear(t.transaction_date) === exportYear);
@@ -1065,7 +1301,61 @@
             XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
             XLSX.writeFile(wb, `transactions_${exportYear + 543}.xlsx`);
         };
-        const importFromXLSX = (event) => { const file = event.target.files[0]; if (!file) { return; } const reader = new FileReader(); reader.onload = async (e) => { try { const data = e.target.result; const workbook = XLSX.read(data, { type: 'binary', cellDates: false }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet, { raw: true }); const { data: { user } } = await db.auth.getUser(); if (!user) { throw new Error("ไม่พบข้อมูลผู้ใช้"); } const newTransactions = []; const validTypes = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)']; for (const row of json) { const formattedDate = formatDateForSupabase(row.transaction_date); const amount = parseFloat(row.amount); const type = row.type ? String(row.type).trim() : null; if (formattedDate && type && validTypes.includes(type) && row.description && !isNaN(amount)) { newTransactions.push({ user_id: user.id, transaction_date: formattedDate, type: type, description: String(row.description), amount: amount, }); } else { console.warn('ข้ามแถวข้อมูลที่ไม่ถูกต้อง:', row); } } if (newTransactions.length > 0) { const { error } = await db.from('transactions').insert(newTransactions); if (error) { throw error; } toast(`นำเข้าข้อมูลสำเร็จ ${newTransactions.length} รายการ ✓`, 'success', { duration: 4000 }); await fetchAllTransactions(); } else { toast('ไม่พบข้อมูลที่ถูกต้องในไฟล์', 'error'); } } catch (error) { console.error('เกิดข้อผิดพลาดในการนำเข้า:', error); toast('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message, 'error'); } finally { event.target.value = null; } }; reader.readAsBinaryString(file); };
+        // [FIX] Import: ตรวจข้อมูลครบ, กันซ้ำ, แจ้งแถวที่ข้าม
+        const VALID_TYPES = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)'];
+        const normalizeType = (v) => {
+            const t = String(v ?? '').trim();
+            if (VALID_TYPES.includes(t)) return t;
+            if (t === 'บัตรเครดิต' || t === 'บัตร' || t === 'รายจ่าย(บัตรเครดิต)') return 'รายจ่าย (บัตรเครดิต)';
+            return null;
+        };
+        const txKey = (t) => `${t.transaction_date}|${t.type}|${descKey(t.description)}|${Number(t.amount).toFixed(2)}`;
+        const importFromXLSX = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: false });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { raw: true, blankrows: false });
+                    const { data: { user } } = await db.auth.getUser();
+                    if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
+                    const existing = new Map();
+                    for (const t of allTransactions) { const k = txKey(t); existing.set(k, (existing.get(k) || 0) + 1); }
+                    const toInsert = [];
+                    const badRows = [];
+                    let dupCount = 0;
+                    json.forEach((row, i) => {
+                        const rowNo = (row.__rowNum__ ?? i + 1) + 1;
+                        const transaction_date = formatDateForSupabase(row.transaction_date);
+                        const type = normalizeType(row.type);
+                        const description = String(row.description ?? '').trim();
+                        const amount = typeof row.amount === 'number' ? row.amount : parseFloat(String(row.amount ?? '').replace(/[,\s฿]/g, ''));
+                        if (!transaction_date || !type || !description || !(amount > 0)) { badRows.push(rowNo); return; }
+                        const t = { user_id: user.id, transaction_date, type, description, amount: Math.round(amount * 100) / 100 };
+                        const k = txKey(t);
+                        if ((existing.get(k) || 0) > 0) { existing.set(k, existing.get(k) - 1); dupCount++; return; }
+                        toInsert.push(t);
+                    });
+                    for (let i = 0; i < toInsert.length; i += 500) {
+                        const { error } = await db.from('transactions').insert(toInsert.slice(i, i + 500));
+                        if (error) throw new Error(`${error.message} (นำเข้าได้ ${i} รายการก่อนเกิดข้อผิดพลาด)`);
+                    }
+                    const parts = [`นำเข้า ${toInsert.length} รายการ`];
+                    if (dupCount) parts.push(`ข้ามที่ซ้ำ ${dupCount}`);
+                    if (badRows.length) parts.push(`ข้อมูลผิด ${badRows.length} แถว (แถว ${badRows.slice(0, 8).join(', ')}${badRows.length > 8 ? ', …' : ''})`);
+                    toast(parts.join(' · '), toInsert.length ? 'success' : 'error', { duration: badRows.length ? 9000 : 5000 });
+                    if (toInsert.length) await fetchAllTransactions();
+                } catch (error) {
+                    console.error('เกิดข้อผิดพลาดในการนำเข้า:', error);
+                    toast('เกิดข้อผิดพลาดในการนำเข้า: ' + error.message, 'error', { duration: 8000 });
+                } finally {
+                    event.target.value = null;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
 
         // ---- APP INITIALIZATION ----
         // [FIX] กันไม่ให้ initializeApp ทำงานซ้ำ (Supabase อาจส่ง SIGNED_IN ซ้ำตอนสลับแท็บ ทำให้ตัวกรองเด้งกลับเดือนปัจจุบัน)
@@ -1187,6 +1477,102 @@
             searchClearBtn.classList.add('hidden');
             toastHost.innerHTML = '';
         });
+
+        // ---- [NEW] คัดลอกรายการทั้งเดือนไปเดือนอื่น ----
+        const copyModalContainer = document.getElementById('copy-modal-container');
+        const copyYearEl = document.getElementById('copy-year');
+        const copyMonthEl = document.getElementById('copy-month');
+        const copyListEl = document.getElementById('copy-list');
+        const copyConfirmBtn = document.getElementById('copy-confirm-btn');
+        const thaiFullMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        let copySource = [];
+        let copySrc = { y: 0, m: 0 };
+        const monthPrefix = (y, m) => `${y}-${pad2(m)}`;
+        const sameItemKey = (t) => `${t.type}|${descKey(t.description)}|${Number(t.amount).toFixed(2)}`;
+
+        const updateCopyCount = () => {
+            const n = copyListEl.querySelectorAll('input:checked').length;
+            copyConfirmBtn.textContent = n ? `คัดลอก ${n} รายการ` : 'คัดลอก';
+            copyConfirmBtn.disabled = n === 0;
+            copyConfirmBtn.style.opacity = n ? '' : '0.5';
+        };
+        const renderCopyList = () => {
+            const ty = parseInt(copyYearEl.value, 10), tm = parseInt(copyMonthEl.value, 10);
+            const targetKeys = new Map();
+            allTransactions.filter(t => t.transaction_date.startsWith(monthPrefix(ty, tm)))
+                .forEach(t => { const k = sameItemKey(t); targetKeys.set(k, (targetKeys.get(k) || 0) + 1); });
+            const isSame = ty === copySrc.y && tm === copySrc.m;
+            copyListEl.innerHTML = copySource.map((t, i) => {
+                const k = sameItemKey(t);
+                const exists = (targetKeys.get(k) || 0) > 0;
+                if (exists) targetKeys.set(k, targetKeys.get(k) - 1);
+                const day = Number(t.transaction_date.slice(8, 10));
+                const sign = t.type === 'รายรับ' ? '+' : '-';
+                return `<li><label><input type="checkbox" data-i="${i}" data-exists="${exists ? 1 : 0}" ${exists || isSame ? '' : 'checked'}>`
+                    + `<span class="c-desc">${typeTag(t.type)}${esc(t.description)}<span class="c-day">วันที่ ${day}</span>${exists ? '<span class="c-exists">เดือนปลายทางมีรายการนี้แล้ว</span>' : ''}</span>`
+                    + `<span class="c-amt ${t.type === 'รายรับ' ? 'positive' : 'negative'}">${sign}${formatMoney(t.amount)}</span></label></li>`;
+            }).join('');
+            updateCopyCount();
+        };
+        window.openCopyModal = () => {
+            closeSwipe();
+            copySrc = { y: parseInt(yearFilterEl.value, 10), m: parseInt(monthFilterEl.value, 10) };
+            copySource = allTransactions.filter(t => t.transaction_date.startsWith(monthPrefix(copySrc.y, copySrc.m)))
+                .sort((a, b) => a.transaction_date < b.transaction_date ? -1 : a.transaction_date > b.transaction_date ? 1 : (Number(a.id) || 0) - (Number(b.id) || 0));
+            if (!copySource.length) { toast('เดือนนี้ยังไม่มีรายการให้คัดลอก', 'error'); return; }
+            document.getElementById('copy-from-label').textContent = `จาก ${thaiFullMonths[copySrc.m - 1]} ${copySrc.y + 543} (${copySource.length} รายการ) · วันที่เดิม`;
+            copyYearEl.innerHTML = yearFilterEl.innerHTML;
+            copyMonthEl.innerHTML = thaiFullMonths.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+            let ty = copySrc.y, tm = copySrc.m + 1;
+            if (tm > 12) { tm = 1; ty += 1; }
+            if (![...copyYearEl.options].some(o => Number(o.value) === ty)) { const o = document.createElement('option'); o.value = ty; o.textContent = ty + 543; copyYearEl.prepend(o); }
+            copyYearEl.value = ty;
+            copyMonthEl.value = tm;
+            renderCopyList();
+            copyModalContainer.classList.remove('hidden');
+        };
+        window.closeCopyModal = () => { copyModalContainer.classList.add('hidden'); };
+        document.getElementById('copy-month-btn').addEventListener('click', openCopyModal);
+        copyYearEl.addEventListener('change', renderCopyList);
+        copyMonthEl.addEventListener('change', renderCopyList);
+        copyListEl.addEventListener('change', updateCopyCount);
+        document.querySelector('.copy-quick').addEventListener('click', (e) => {
+            const b = e.target.closest('button[data-pick]');
+            if (!b) return;
+            copyListEl.querySelectorAll('input[type=checkbox]').forEach(cb => {
+                const t = copySource[Number(cb.dataset.i)];
+                const fresh = cb.dataset.exists !== '1'; // ข้ามรายการที่เดือนปลายทางมีแล้ว (ติ๊กเองได้)
+                cb.checked = b.dataset.pick === 'all' ? fresh : b.dataset.pick === 'expense' ? fresh && t.type !== 'รายรับ' : false;
+            });
+            updateCopyCount();
+        });
+        copyConfirmBtn.addEventListener('click', async () => {
+            if (copyConfirmBtn.dataset.busy) return;
+            const ty = parseInt(copyYearEl.value, 10), tm = parseInt(copyMonthEl.value, 10);
+            if (ty === copySrc.y && tm === copySrc.m) { toast('เลือกเดือนปลายทางที่ไม่ใช่เดือนเดิม', 'error'); return; }
+            const picked = [...copyListEl.querySelectorAll('input:checked')].map(cb => copySource[Number(cb.dataset.i)]);
+            if (!picked.length) return;
+            const { data: { user } } = await db.auth.getUser();
+            if (!user) { toast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error'); return; }
+            const rows = picked.map(t => ({ user_id: user.id, type: t.type, description: t.description, amount: t.amount, transaction_date: sameDayIn(ty, tm, Number(t.transaction_date.slice(8, 10))) }));
+            copyConfirmBtn.dataset.busy = '1';
+            copyConfirmBtn.textContent = 'กำลังคัดลอก...';
+            try {
+                const { data, error } = await db.from('transactions').insert(rows).select('id');
+                if (error) { toast('คัดลอกไม่สำเร็จ: ' + error.message, 'error'); return; }
+                closeCopyModal();
+                const ids = (data || []).map(r => r.id);
+                toast(`คัดลอก ${rows.length} รายการไป ${thaiShortMonths[tm - 1]} ${String(ty + 543).slice(-2)} แล้ว ✓`, 'success', ids.length ? { duration: 6000, actionLabel: 'เลิกทำ', onAction: () => undoInsert(ids) } : {});
+                await fetchAllTransactions();
+                if (hasYearOption(ty)) { yearFilterEl.value = ty; exportYearFilterEl.value = ty; monthFilterEl.value = tm; renderUI(); }
+            } finally {
+                delete copyConfirmBtn.dataset.busy;
+                updateCopyCount();
+            }
+        });
+        copyModalContainer.addEventListener('click', (ev) => { if (ev.target === copyModalContainer) closeCopyModal(); });
+        document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeCopyModal(); });
+        db.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') closeCopyModal(); });
 
         initializeApp();
     </script>
