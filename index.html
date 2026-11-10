@@ -370,16 +370,6 @@
         .type-seg button.active[data-type="รายจ่าย"] { background: #b91c1c; color: #fff; font-weight: 600; }
         .type-seg button.active[data-type="รายจ่าย (บัตรเครดิต)"] { background: #7c3aed; color: #fff; font-weight: 600; }
 
-        /* ชิปรายการบ่อย */
-        .quick-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-        .quick-chips:empty { display: none; }
-        .quick-chips button {
-            width: auto; padding: 7px 12px; font-size: 0.9rem; font-weight: 500;
-            background: #fff; color: #000; border: 2px solid #000; box-shadow: 2px 2px 0 #000;
-        }
-        .quick-chips button small { color: #555; margin-left: 4px; }
-        .quick-chips button:active { transform: translate(2px, 2px); box-shadow: none; }
-
         /* ซ้ำทุกเดือน */
         .recur-box { margin-top: 18px; border: 2px dashed rgba(0,0,0,0.6); padding: 12px; background: rgba(0,0,0,0.12); }
         .recur-toggle { display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer; margin: 0; }
@@ -390,15 +380,6 @@
         .recur-preview { font-size: 0.9rem; margin-top: 6px; font-weight: 500; background: #fff; color: #000; padding: 8px 10px; border: 2px solid #000; }
         .recur-preview:empty { display: none; }
 
-        /* รายการแบบรายวัน */
-        .day-header {
-            display: flex; justify-content: space-between; align-items: center;
-            background: var(--mario-dark-brown); color: #fff; border: 2px solid #000;
-            padding: 8px 12px; margin-top: 12px; font-weight: 600; font-size: 0.95rem;
-        }
-        .day-header:first-child { margin-top: 0; }
-        .day-header .positive { color: #80FFAF !important; }
-        .day-header .negative { color: #FF8A8A !important; }
         .item-tag { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 1px 6px; border: 1.5px solid currentColor; margin-right: 6px; vertical-align: 1px; }
         .item-tag.credit { color: #7c3aed; }
         .item-tag.income { color: #15803d; }
@@ -511,7 +492,6 @@
         <div class="modal-content">
             <h2 class="section-title" id="add-modal-title">เพิ่มรายการ</h2>
             <form id="transaction-form" autocomplete="off">
-                <div class="quick-chips" id="quick-chips"></div>
                 <div class="form-group"><label for="description">รายละเอียด</label><input type="text" id="description" list="desc-suggestions" required enterkeyhint="next"></div>
                 <div class="form-group"><label for="amount">จำนวนเงิน</label><input type="number" step="0.01" min="0.01" id="amount" inputmode="decimal" required></div>
                 <div class="form-group"><label>ประเภท</label><input type="hidden" id="type" value="รายจ่าย"><div class="type-seg" data-for="type"><button type="button" data-type="รายรับ">รายรับ</button><button type="button" data-type="รายจ่าย">รายจ่าย</button><button type="button" data-type="รายจ่าย (บัตรเครดิต)">บัตรเครดิต</button></div></div>
@@ -709,17 +689,7 @@
                 opt.value = t.description;
                 datalist.appendChild(opt);
             }
-            // [NEW] รายการบ่อย 6 อันดับ (90 วันล่าสุด; ถ้าน้อยไปใช้ทั้งหมด)
-            const since = daysAgoLocal(90);
-            const countBy = (list) => { const m = new Map(); for (const t of list) { const k = descKey(t.description); if (k) m.set(k, (m.get(k) || 0) + 1); } return m; };
-            let counts = countBy(allTransactions.filter(t => t.transaction_date >= since));
-            if (counts.size < 6) counts = countBy(allTransactions);
-            frequentItems = [...counts.entries()]
-                .sort((a, b) => b[1] - a[1] || (lastByDescription.get(b[0]).transaction_date > lastByDescription.get(a[0]).transaction_date ? 1 : -1))
-                .slice(0, 6)
-                .map(([k]) => lastByDescription.get(k));
         };
-        let frequentItems = [];
 
         // ---- [NEW] ปุ่มประเภทแตะเดียว ----
         const setTypeValue = (inputId, value) => {
@@ -730,24 +700,6 @@
             seg.addEventListener('click', (e) => { const b = e.target.closest('button[data-type]'); if (b) setTypeValue(seg.dataset.for, b.dataset.type); });
         });
 
-        // ---- [NEW] ชิปรายการบ่อย ----
-        const renderQuickChips = (show) => {
-            const box = document.getElementById('quick-chips');
-            box.innerHTML = '';
-            if (!show) return;
-            frequentItems.forEach(t => {
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.innerHTML = `${esc(t.description)}<small>฿${formatMoney(t.amount).replace(/\.00$/, '')}</small>`;
-                b.addEventListener('click', () => {
-                    document.getElementById('description').value = t.description;
-                    document.getElementById('amount').value = t.amount;
-                    amountAutoFilled = true;
-                    setTypeValue('type', t.type);
-                });
-                box.appendChild(b);
-            });
-        };
 
         let amountAutoFilled = false;
         const applySuggestion = () => {
@@ -774,7 +726,6 @@
             addIsDuplicate = !!prefill;
             transactionDateEl.value = todayLocal();
             resetRecur();
-            renderQuickChips(!prefill);
             if (prefill) {
                 document.getElementById('description').value = prefill.description;
                 document.getElementById('amount').value = prefill.amount;
@@ -1003,6 +954,7 @@
         const typeTag = (type) => type === 'รายรับ' ? '<span class="item-tag income">รับ</span>' : type === 'รายจ่าย (บัตรเครดิต)' ? '<span class="item-tag credit">บัตร</span>' : '';
         const transactionItemHTML = (t, opts = {}) => {
             const showDate = opts.showDate !== false;
+            const showTag = opts.showTag !== false;
             const sign = t.type === 'รายรับ' ? '+' : '-';
             const itemClass = t.type === 'รายรับ' ? 'positive' : 'negative';
             const formattedDate = new Date(t.transaction_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', calendar: 'buddhist', timeZone: 'UTC' });
@@ -1012,7 +964,7 @@
                 + `<button type="button" class="edit-btn" tabindex="-1" onclick="openEditModal('${id}')">แก้ไข</button>`
                 + `<button type="button" class="delete-btn" tabindex="-1" onclick="removeTransaction('${id}')">ลบ</button>`
                 + `</div>`
-                + `<div class="item-front"><div class="item-details"><span class="item-name">${typeTag(t.type)}${esc(t.description)}</span>${showDate ? `<span class="item-date">${formattedDate}</span>` : ''}</div>`
+                + `<div class="item-front"><div class="item-details"><span class="item-name">${showTag ? typeTag(t.type) : ''}${esc(t.description)}</span>${showDate ? `<span class="item-date">${formattedDate}</span>` : ''}</div>`
                 + `<span class="item-amount ${itemClass}">${sign}฿${formatMoney(t.amount)}</span></div>`;
         };
 
@@ -1105,29 +1057,42 @@
             listEl.innerHTML = html;
         };
 
-        // ---- [NEW] รายการแบบรายวัน ----
-        const dayLabel = (iso) => {
-            if (iso === todayLocal()) return 'วันนี้';
-            if (iso === daysAgoLocal(1)) return 'เมื่อวาน';
-            const [y, m, d] = iso.split('-').map(Number);
-            return new Date(y, m - 1, d).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' });
-        };
-        const signedNet = (list) => list.reduce((sum, t) => sum + (t.type === 'รายรับ' ? t.amount : -t.amount), 0);
+        // ---- [NEW] จำว่ากลุ่มไหนเปิดอยู่ ----
+        const openGroups = new Set(store.get('openGroups', []));
 
         const renderTransactionList = (transactions) => {
             openFront = null;
             const listEl = document.getElementById('list');
             listEl.innerHTML = '';
-            if (transactions.length === 0) { listEl.innerHTML = '<p style="text-align: center; padding: 20px 0; background:#fff; color:#000; border: 2px solid #000;">ยังไม่มีรายการในเดือนนี้ · กด + เพื่อเพิ่ม</p>'; return; }
-            const byDay = new Map();
-            for (const t of transactions) { if (!byDay.has(t.transaction_date)) byDay.set(t.transaction_date, []); byDay.get(t.transaction_date).push(t); }
-            let html = '';
-            for (const [day, items] of byDay) {
-                const net = signedNet(items);
-                html += `<div class="day-header"><span>${esc(dayLabel(day))}</span><span class="${net >= 0 ? 'positive' : 'negative'}">${net >= 0 ? '+' : '-'}${formatMoney(Math.abs(net))}</span></div>`;
-                html += '<ul class="sub-list">' + items.map(t => `<li class="transaction-item">${transactionItemHTML(t, { showDate: false })}</li>`).join('') + '</ul>';
-            }
-            listEl.innerHTML = html;
+            if (transactions.length === 0) { listEl.innerHTML = '<p style="text-align: center; padding: 20px 0; background:#fff; color:#000;">ไม่พบรายการในเดือนนี้</p>'; return; }
+            const groupedByType = transactions.reduce((groups, t) => { const type = t.type; if (!groups[type]) { groups[type] = []; } groups[type].push(t); return groups; }, {});
+            const groupOrder = ['รายรับ', 'รายจ่าย', 'รายจ่าย (บัตรเครดิต)'];
+            groupOrder.forEach(type => {
+                if (!groupedByType[type]) return; 
+                const groupContainer = document.createElement('div');
+                const header = document.createElement('div');
+                header.className = 'list-group-header';
+                header.onclick = () => {
+                    const nowHidden = subList.classList.toggle('hidden');
+                    if (nowHidden) openGroups.delete(type); else openGroups.add(type);
+                    store.set('openGroups', [...openGroups]);
+                };
+                const groupTotal = groupedByType[type].reduce((sum, t) => sum + t.amount, 0);
+                const totalClass = type === 'รายรับ' ? 'positive' : 'negative';
+                const totalSign = type === 'รายรับ' ? '+' : '-';
+                header.innerHTML = `<span>${esc(type)}</span><span class="group-total ${totalClass}">${totalSign}${formatMoney(groupTotal)}</span>`;
+                const subList = document.createElement('ul');
+                subList.className = openGroups.has(type) ? 'sub-list' : 'sub-list hidden';
+                groupedByType[type].forEach(t => {
+                    const item = document.createElement('li');
+                    item.className = 'transaction-item';
+                    item.innerHTML = transactionItemHTML(t, { showTag: false });
+                    subList.appendChild(item);
+                });
+                groupContainer.appendChild(header);
+                groupContainer.appendChild(subList);
+                listEl.appendChild(groupContainer);
+            });
         };
 
         const renderSummary = (yearlyTransactions, year) => {
